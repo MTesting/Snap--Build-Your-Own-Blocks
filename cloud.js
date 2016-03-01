@@ -197,7 +197,7 @@ Cloud.prototype.getModuleList = function (callBack, errorCall) {
     try {
         request.open(
             "GET",
-            "https://api.github.com/repos/MTesting/Test/contents/Test",
+            "https://api.github.com/repos/MTesting/Test/contents",
             true
         );
         request.setRequestHeader(
@@ -224,7 +224,7 @@ Cloud.prototype.getBlockList = function (module, callBack, errorCall) {
     try {
         request.open(
             "GET",
-            "https://api.github.com/repos/MTesting/Test/contents/Test/" + module,
+            "https://api.github.com/repos/MTesting/Test/contents" + module,
             true
         );
         request.setRequestHeader(
@@ -251,7 +251,7 @@ Cloud.prototype.getBlockFile = function (module, block, callBack, errorCall) {
     try {
         request.open(
             "GET",
-            "https://raw.githubusercontent.com/MTesting/Test/master/Test/"+module+"/"+block,
+            "https://raw.githubusercontent.com/MTesting/Test/master/"+module+"/"+block,
             true
         );
         request.setRequestHeader(

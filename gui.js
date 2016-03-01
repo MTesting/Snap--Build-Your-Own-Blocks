@@ -2676,482 +2676,11 @@ IDE_Morph.prototype.projectMenu = function () {
 ///////////////////////////////////////// EDUARDO ////////////////////////////////////////
 
     menu.addLine();
-    menu.addItem('Browse modules','openModuleBrowser','browse all modules from community developers');
 
+    menu.addItem('Browse modules','openModuleBrowser','browse all modules from community developers');
     menu.addItem('Publish module','publishModuleBrowser','pubish and share your local module');
 
-    IDE_Morph.prototype.openModuleBrowser = function () {
-        new ModuleDialogMorph(this, 'browse').popUp();
-    };
-
-    IDE_Morph.prototype.publishModuleBrowser = function () {
-        new ModuleDialogMorph(this, 'publish').popUp();
-    };
-
-    // ModuleDialogMorph ////////////////////////////////////////////////////
-
-    // ModuleDialogMorph inherits from DialogBoxMorph:
-
-    ModuleDialogMorph.prototype = new DialogBoxMorph();
-    ModuleDialogMorph.prototype.constructor = ModuleDialogMorph;
-    ModuleDialogMorph.uber = DialogBoxMorph.prototype;
-
-    // ModuleDialogMorph instance creation:
-
-    function ModuleDialogMorph(ide,label) {
-        this.init(ide,label);
-    }
-
-    ModuleDialogMorph.prototype.init = function (ide,task) {
-        var myself = this;
-
-        // additional properties:
-        this.ide = ide;
-        this.task = task || 'browse'; // String describing what do do (browse, publish, update)
-        this.moduleList =  [];
-        this.blockList = [];
-        this.moduleBlockSelection = [null,null];
-        this.requestModules(); // [{name: }]
-
-        this.handle = null;
-        this.nameField = null; /* input text */
-        this.checkBox = null; /* only my modules */
-        this.modulesListField = null;
-        this.blocksListField = null; /* EN COMUN */
-        this.descriptionNotesText = null;
-        this.informationNotesText = null;
-        this.descriptionNotesField = null;
-        this.informationNotesField = null;
-        this.deleteButton = null;
-
-        // initialize inherited properties:
-        ModuleDialogMorph.uber.init.call(
-            this,
-            this, // target
-            null, // function
-            null // environment
-        );
-
-        // override inherited properites:
-        this.labelString = this.task === 'browse' ? 'Browse Modules' : 'Publish Module';
-        this.createLabel();
-        this.task == 'browse' ? this.key = 'browsemodules' : this.key = 'publishmodule';
-
-        // build contents
-        this.buildContents();
-    };
-
-    ModuleDialogMorph.prototype.buildContents = function () {
-        var thumbnail, notification;
-        this.addBody(new Morph());
-        this.body.color = this.color;
-
-        var myself = this;
-        if(this.task == 'browse') {
-            this.checkBox = new ToggleMorph(
-                'checkbox',
-                null,
-                function () {
-                    //myself.currentSprite.isDraggable =
-                    //    !myself.currentSprite.isDraggable;
-                    this.state = myself.checkBox.state = !myself.checkBox.state;
-                    myself.addModules();
-                    myself.fixListFieldItemColors();
-                    myself.fixLayout();
-                    myself.requestModules(); // [{name: }]
-                },
-                localize('only my modules'),
-                function () {
-                    this.state = this.state == undefined ? false : this.state;
-                    return this.state;
-                }
-            );
-            this.body.add(this.checkBox);
-
-            this.nameField = new InputFieldMorph('');
-            this.body.add(this.nameField);
-        }
-
-        /*this.modulesListField = new ListMorph(['1234567890',clicked,'1','1','1','1','1','1','1','1','1','1','1','1','1','1','1']);
-        this.fixListFieldItemColors();
-        this.modulesListField.fixLayout = nop;
-        this.modulesListField.edge = InputFieldMorph.prototype.edge;
-        this.modulesListField.fontSize = InputFieldMorph.prototype.fontSize;
-        this.modulesListField.typeInPadding = InputFieldMorph.prototype.typeInPadding;
-        this.modulesListField.contrast = InputFieldMorph.prototype.contrast;
-        this.modulesListField.drawNew = InputFieldMorph.prototype.drawNew;
-        this.modulesListField.drawRectBorder = InputFieldMorph.prototype.drawRectBorder;
-        this.modulesListField.setWidth (150);
-        this.body.add(this.modulesListField);*/
-
-        /*if (this.task === 'save') {
-            thumbnail = this.ide.stage.thumbnail(
-                SnapSerializer.prototype.thumbnailSize
-            );
-            this.blocksListField.texture = null;
-            this.blocksListField.cachedTexture = thumbnail;
-            this.blocksListField.drawCachedTexture();
-        }*/
-
-        this.descriptionNotesField = new ScrollFrameMorph();
-        this.descriptionNotesField.fixLayout = nop;
-
-        this.descriptionNotesField.edge = InputFieldMorph.prototype.edge;
-        this.descriptionNotesField.fontSize = InputFieldMorph.prototype.fontSize;
-        this.descriptionNotesField.typeInPadding = InputFieldMorph.prototype.typeInPadding;
-        this.descriptionNotesField.contrast = InputFieldMorph.prototype.contrast;
-        this.descriptionNotesField.drawNew = InputFieldMorph.prototype.drawNew;
-        this.descriptionNotesField.drawRectBorder = InputFieldMorph.prototype.drawRectBorder;
-
-        this.descriptionNotesField.acceptsDrops = false;
-        this.descriptionNotesField.contents.acceptsDrops = false;
-
-        this.descriptionNotesText = new TextMorph('description');
-        this.descriptionNotesText.isEditable = false;
-        this.descriptionNotesText.enableSelecting();
-
-        this.descriptionNotesField.isTextLineWrapping = true;
-        this.descriptionNotesField.padding = 3;
-        this.descriptionNotesField.setContents(this.descriptionNotesText);
-        this.descriptionNotesField.setWidth(200);
-
-        this.body.add(this.descriptionNotesField);
-
-        this.informationNotesField = new ScrollFrameMorph();
-        this.informationNotesField.fixLayout = nop;
-
-        this.informationNotesField.edge = InputFieldMorph.prototype.edge;
-        this.informationNotesField.fontSize = InputFieldMorph.prototype.fontSize;
-        this.informationNotesField.typeInPadding = InputFieldMorph.prototype.typeInPadding;
-        this.informationNotesField.contrast = InputFieldMorph.prototype.contrast;
-        this.informationNotesField.drawNew = InputFieldMorph.prototype.drawNew;
-        this.informationNotesField.drawRectBorder = InputFieldMorph.prototype.drawRectBorder;
-
-        this.informationNotesField.acceptsDrops = false;
-        this.informationNotesField.contents.acceptsDrops = false;
-
-        this.informationNotesText = new TextMorph('information');
-        this.informationNotesText.isEditable = false;
-        this.informationNotesText.enableSelecting();
-
-        this.informationNotesField.isTextLineWrapping = true;
-        this.informationNotesField.padding = 3;
-        this.informationNotesField.setContents(this.informationNotesText);
-        this.informationNotesField.setWidth(200);
-
-        this.body.add(this.informationNotesField);
-
-        if(this.task == 'browse') {
-            this.addButton('importModule', 'Import');
-            this.action = 'importModule';
-
-            this.addButton('downloadModule', 'Download');
-            this.action = 'downloadModule';
-        } else {
-            this.addButton('publishModule', 'Publish');
-            this.action = 'publishModule';
-        }
-
-        this.addButton('cancel', 'Cancel');
-
-        this.addModules();
-        this.addBlocks();
-        this.setWidth(this.padding + this.modulesListField.width() + this.padding + 200 + this.padding + 200 + this.padding);
-        this.setHeight(400);
-        this.fixListFieldItemColors();
-        this.fixLayout();
-    };
-
-    ModuleDialogMorph.prototype.popUp = function (wrrld) {
-        var world = wrrld || this.ide.world();
-        if (world) {
-            ModuleDialogMorph.uber.popUp.call(this, world);
-            this.handle = new HandleMorph(
-                this,
-                350,
-                300,
-                this.corner,
-                this.corner
-            );
-        }
-    };
-
-    // ModuleDialogMorph list field control
-
-    ModuleDialogMorph.prototype.fixListFieldItemColors = function () {
-        // remember to always fixLayout() afterwards for the changes
-        // to take effect
-        var myself = this;
-        this.modulesListField.contents.children[0].alpha = 0;
-        this.modulesListField.contents.children[0].children.forEach(function (item) {
-            item.pressColor = myself.titleBarColor.darker(20);
-            item.color = new Color(0, 0, 0, 0);
-            item.noticesTransparentClick = true;
-        });
-
-        this.blocksListField.contents.children[0].alpha = 0;
-        this.blocksListField.contents.children[0].children.forEach(function (item) {
-            item.pressColor = myself.titleBarColor.darker(20);
-            item.color = new Color(0, 0, 0, 0);
-            item.noticesTransparentClick = true;
-        });
-    };
-
-    ModuleDialogMorph.prototype.requestBlockFile = function (module, block) {
-        var myself = this;
-        SnapCloud.getBlockFile(
-            module,
-            block,
-            function (blockContents) {
-                myself.ide.saveXMLAs(blockContents, 'test');
-                /*
-                myself.moduleList = [];
-                var moduleList = JSON.parse(moduleListJSON);
-                moduleList.forEach(function(module){
-                    myself.moduleList.push(module.name);
-                });
-                myself.addModules();
-                myself.fixListFieldItemColors();
-                myself.fixLayout();*/
-            },
-            myself.ide.cloudError()
-        );
-    };
-
-    ModuleDialogMorph.prototype.requestModules = function () {
-        var myself = this;
-        SnapCloud.getModuleList(
-            function (moduleListJSON) {
-                myself.moduleList = [];
-                var moduleList = JSON.parse(moduleListJSON);
-                moduleList.forEach(function(module){
-                    myself.moduleList.push(module.name);
-                });
-                myself.addModules();
-                myself.fixListFieldItemColors();
-                myself.fixLayout();
-            },
-            myself.ide.cloudError()
-        );
-    }
-
-    ModuleDialogMorph.prototype.requestBlocks = function (module) {
-        var myself = this;
-        SnapCloud.getBlockList(
-            module,
-            function (blockListJSON) {
-
-                myself.blockList = [];
-                var blockList = JSON.parse(blockListJSON);
-                blockList.forEach(function(block){
-                    if(block.name == 'info.txt') {
-                        if(myself.descriptionNotesText)
-                            myself.descriptionNotesText.destroy();
-
-                        myself.descriptionNotesText = new TextMorph(item);
-                        myself.descriptionNotesText.isEditable = false;
-                        myself.descriptionNotesText.enableSelecting();
-
-                        myself.descriptionNotesField.setContents(myself.descriptionNotesText);
-                    }
-                    else myself.blockList.push(block.name);
-                });
-                myself.addBlocks();
-                myself.fixListFieldItemColors();
-                myself.fixLayout();
-            },
-            myself.ide.cloudError()
-        );
-    }
-
-    ModuleDialogMorph.prototype.addModules = function () {
-        //var module = this.checkBox.state ? 'clicked' : 'unclicked';
-        //this.modulesListField = new ListMorph(['1234567890',module,'1',this.nameField.getValue(),'1','1','1','1','1','1','1','1','1','1','1','1','1']);
-
-        if(this.modulesListField)
-            this.modulesListField.destroy();
-
-        this.modulesListField = new ListMorph(this.moduleList);
-        this.modulesListField.fixLayout = nop;
-        this.modulesListField.edge = InputFieldMorph.prototype.edge;
-        this.modulesListField.fontSize = InputFieldMorph.prototype.fontSize;
-        this.modulesListField.typeInPadding = InputFieldMorph.prototype.typeInPadding;
-        this.modulesListField.contrast = InputFieldMorph.prototype.contrast;
-        this.modulesListField.drawNew = InputFieldMorph.prototype.drawNew;
-        this.modulesListField.drawRectBorder = InputFieldMorph.prototype.drawRectBorder;
-        this.modulesListField.setWidth (150);
-
-        var myself = this;
-        this.modulesListField.action = function (item) {
-            myself.moduleBlockSelection[0] = item;
-            myself.moduleBlockSelection[1] = null;
-            /*if(myself.descriptionNotesText)
-                myself.descriptionNotesText.destroy();
-
-            myself.descriptionNotesText = new TextMorph(item);
-            myself.descriptionNotesText.isEditable = false;
-            myself.descriptionNotesText.enableSelecting();
-
-            myself.descriptionNotesField.setContents(myself.descriptionNotesText);*/
-            myself.requestBlocks(item);
-        }
-        this.body.add(this.modulesListField);
-    }
-
-    ModuleDialogMorph.prototype.addBlocks = function () {
-        if(this.blocksListField)
-            this.blocksListField.destroy();
-
-        this.blocksListField = new ListMorph(this.blockList);
-        this.blocksListField.fixLayout = nop;
-        this.blocksListField.edge = InputFieldMorph.prototype.edge;
-        this.blocksListField.fontSize = InputFieldMorph.prototype.fontSize;
-        this.blocksListField.typeInPadding = InputFieldMorph.prototype.typeInPadding;
-        this.blocksListField.contrast = InputFieldMorph.prototype.contrast;
-        this.blocksListField.drawNew = InputFieldMorph.prototype.drawNew;
-        this.blocksListField.drawRectBorder = InputFieldMorph.prototype.drawRectBorder;
-        this.blocksListField.setWidth (150);
-
-        var myself = this;
-        this.blocksListField.action = function (item) {
-            myself.moduleBlockSelection[1] = item;
-            /*if(myself.descriptionNotesText)
-                myself.descriptionNotesText.destroy();
-
-            myself.descriptionNotesText = new TextMorph(item);
-            myself.descriptionNotesText.isEditable = false;
-            myself.descriptionNotesText.enableSelecting();
-
-            //myself.descriptionNotesField.setContents(myself.blockList);//myself.descriptionNotesText);*/
-            //if(myself.moduleSelected != null)
-                //myself.requestBlockFile(myself.moduleSelected,item);
-        }
-
-        this.body.add(this.blocksListField);
-    }
-
-
-    ModuleDialogMorph.prototype.importModule = function () {
-
-
-    }
-
-    ModuleDialogMorph.prototype.downloadModule = function () {
-        if(this.moduleBlockSelection[0]!=null && this.moduleBlockSelection[1]!=null) {
-            this.requestBlockFile(this.moduleBlockSelection[0], this.moduleBlockSelection[1]);
-        }
-     }
-
-     ModuleDialogMorph.prototype.publishModule = function () {
-
-
-      }
-
-    // ModuleDialogMorph layout
-
-    ModuleDialogMorph.prototype.fixLayout = function () {
-        var th = fontHeight(this.titleFontSize) + this.titlePadding * 2,
-            thin = this.padding / 2,
-            oldFlag = Morph.prototype.trackChanges;
-
-        Morph.prototype.trackChanges = false;
-
-        if (this.buttons && (this.buttons.children.length > 0)) {
-            this.buttons.fixLayout();
-        }
-
-        if (this.body) {
-            this.setWidth(Math.max(this.width(), this.modulesListField.width() + this.blocksListField.width() + 200));
-            this.setHeight(Math.max(this.height(), 400));
-            this.body.setPosition(this.position().add(new Point(
-                this.padding,
-                th + this.padding
-            )));
-            this.body.setExtent(new Point(
-                this.width() - this.padding * 2,
-                this.height() - this.padding * 3 - th - this.buttons.height()
-            ));
-
-            //this.srcBar.setPosition(this.body.position());
-            //this.nameField == null???
-            if (this.nameField) {
-                this.task == 'browse' ? this.nameField.setTop(this.checkBox.bottom() + this.padding) : this.nameField.setTop(this.body.top() + this.padding);
-                this.nameField.setWidth(
-                    this.modulesListField.width()
-                );
-                this.nameField.setLeft(this.body.left());
-                this.nameField.drawNew();
-            }
-            // this.paddig = 14
-
-            this.modulesListField.setLeft(this.nameField.left());
-            this.modulesListField.setWidth(
-                this.modulesListField.width() // width constante  4cm mas o menos
-                /*this.body.width()
-                    - this.blocksListField.width()
-                    - this.padding
-                    - thin*/
-            );
-            this.modulesListField.contents.children[0].adjustWidths();
-
-            if (this.nameField) {
-                this.modulesListField.setTop(this.nameField.bottom() + this.padding);
-                this.modulesListField.setHeight(
-                    this.body.bottom() - this.nameField.bottom() - this.padding
-                );
-            } else {
-                this.modulesListField.setTop(this.nameField.bottom());
-                this.modulesListField.setHeight(this.body.height());
-            }
-
-            //this.blocksListField.setRight(this.body.right());
-            this.blocksListField.setLeft(this.modulesListField.right() + this.padding);
-            /*if (this.nameField) {
-                this.blocksListField.setTop(this.nameField.bottom() + this.padding);
-            } else {
-                this.blocksListField.setTop(this.body.top());
-            }*/
-            this.blocksListField.setTop(this.body.top());
-            this.blocksListField.setHeight(this.body.height());
-
-            /*this.descriptionNotesField.setTop(this.blocksListField.bottom() + thin);
-            this.descriptionNotesField.setLeft(this.blocksListField.left());
-            this.descriptionNotesField.setHeight(
-                this.body.bottom() - this.blocksListField.bottom() - thin
-            );*/
-
-            this.descriptionNotesField.setTop(this.blocksListField.top());
-            //this.descriptionNotesField.setLeft(this.blocksListField.left() + this.blocksListField.width() + this.padding);
-            this.descriptionNotesField.setHeight(
-                this.blocksListField.height()
-            );
-            this.blocksListField.contents.children[0].adjustWidths();
-            //this.descriptionNotesField.setLeft(this.blocksListField.right() + this.padding);
-            this.descriptionNotesField.setWidth(this.body.right() - this.blocksListField.right() - this.padding);
-            this.descriptionNotesField.setLeft(this.blocksListField.right() + this.padding);
-            this.descriptionNotesField.setHeight(this.body.height() - 100 - this.padding);
-            this.descriptionNotesField.setTop(this.blocksListField.top());
-
-            this.informationNotesField.setWidth(this.descriptionNotesField.width());
-            this.informationNotesField.setLeft(this.descriptionNotesField.left());
-            this.informationNotesField.setHeight(100);
-            this.informationNotesField.setTop(this.descriptionNotesField.bottom() + this.padding);
-        }
-
-        if (this.label) {
-            this.label.setCenter(this.center());
-            this.label.setTop(this.top() + (th - this.label.height()) / 2);
-        }
-
-        if (this.buttons && (this.buttons.children.length > 0)) {
-            this.buttons.setCenter(this.center());
-            this.buttons.setBottom(this.bottom() - this.padding);
-        }
-
-        Morph.prototype.trackChanges = oldFlag;
-        this.changed();
-    };
-    ///////////////////////////////////////// EDUARDO ///////////////////////////////////////////////////////
+// EDUARDO
 
     menu.addLine();
     menu.addItem(
@@ -3210,6 +2739,493 @@ IDE_Morph.prototype.projectMenu = function () {
 
     menu.popup(world, pos);
 };
+
+IDE_Morph.prototype.openModuleBrowser = function () {
+    new ModuleDialogMorph(this, 'browse').popUp();
+};
+
+IDE_Morph.prototype.publishModuleBrowser = function () {
+    new ModuleDialogMorph(this, 'publish').popUp();
+};
+
+// ModuleDialogMorph ////////////////////////////////////////////////////
+
+// ModuleDialogMorph inherits from DialogBoxMorph:
+
+ModuleDialogMorph.prototype = new DialogBoxMorph();
+ModuleDialogMorph.prototype.constructor = ModuleDialogMorph;
+ModuleDialogMorph.uber = DialogBoxMorph.prototype;
+
+// ModuleDialogMorph instance creation:
+
+function ModuleDialogMorph(ide,label) {
+    this.init(ide,label);
+}
+
+ModuleDialogMorph.prototype.init = function (ide,task) {
+    var myself = this;
+
+    // additional properties:
+    this.ide = ide;
+    this.task = task || 'browse'; // String describing what do do (browse, publish, update)
+    this.moduleList =[];
+    this.blockList = [];
+    this.moduleBlockSelection = [null,null];
+    this.requestModules(); // [{name: }]
+
+    this.handle = null;
+    this.nameField = null; /* input text */
+    this.checkBox = null; /* only my modules */
+    this.modulesListField = null;
+    this.blocksListField = null; /* EN COMUN */
+    this.descriptionNotesText = null;
+    this.informationNotesText = null;
+    this.descriptionNotesField = null;
+    this.informationNotesField = null;
+    this.deleteButton = null;
+
+    // initialize inherited properties:
+    ModuleDialogMorph.uber.init.call(
+            this,
+            this, // target
+            null, // function
+            null // environment
+            );
+
+    // override inherited properites:
+    this.labelString = this.task === 'browse' ? 'Browse Modules' : 'Publish Module';
+    this.createLabel();
+    this.task == 'browse' ? this.key = 'browsemodules' : this.key = 'publishmodule';
+
+    // build contents
+    this.buildContents();
+};
+
+ModuleDialogMorph.prototype.buildContents = function () {
+    var thumbnail,
+    notification, 
+    myself = this;
+
+    this.addBody(new Morph());
+    this.body.color = this.color;
+
+    if (this.task === 'browse') {
+        this.checkBox = new ToggleMorph(
+                'checkbox',
+                null,
+                function () {
+                    //myself.currentSprite.isDraggable =
+                    //    !myself.currentSprite.isDraggable;
+                    this.state = myself.checkBox.state = !myself.checkBox.state;
+                    myself.addModules();
+                    myself.fixListFieldItemColors();
+                    myself.fixLayout();
+                    myself.requestModules(); // [{name: }]
+                },
+                localize('only my modules'),
+                function () {
+                    this.state = this.state === undefined ? false : this.state;
+                    return this.state;
+                }
+                );
+        this.body.add(this.checkBox);
+
+        this.nameField = new InputFieldMorph('');
+
+        this.nameField.contents().childChanged = function(child) {
+            if (child instanceof StringMorph) {
+                // Filtrar per nom
+                // Revisar!
+                myself.moduleList.filter(
+                        function(each) { 
+                            return each.indexOf(child.text) > -1;
+                        });
+            }
+        }
+
+        this.body.add(this.nameField);
+    }
+
+    /*this.modulesListField = new ListMorph(['1234567890',clicked,'1','1','1','1','1','1','1','1','1','1','1','1','1','1','1']);
+      this.fixListFieldItemColors();
+      this.modulesListField.fixLayout = nop;
+      this.modulesListField.edge = InputFieldMorph.prototype.edge;
+      this.modulesListField.fontSize = InputFieldMorph.prototype.fontSize;
+      this.modulesListField.typeInPadding = InputFieldMorph.prototype.typeInPadding;
+      this.modulesListField.contrast = InputFieldMorph.prototype.contrast;
+      this.modulesListField.drawNew = InputFieldMorph.prototype.drawNew;
+      this.modulesListField.drawRectBorder = InputFieldMorph.prototype.drawRectBorder;
+      this.modulesListField.setWidth (150);
+      this.body.add(this.modulesListField);*/
+
+    /*if (this.task === 'save') {
+      thumbnail = this.ide.stage.thumbnail(
+      SnapSerializer.prototype.thumbnailSize
+      );
+      this.blocksListField.texture = null;
+      this.blocksListField.cachedTexture = thumbnail;
+      this.blocksListField.drawCachedTexture();
+      }*/
+
+    this.descriptionNotesField = new ScrollFrameMorph();
+    this.descriptionNotesField.fixLayout = nop;
+
+    this.descriptionNotesField.edge = InputFieldMorph.prototype.edge;
+    this.descriptionNotesField.fontSize = InputFieldMorph.prototype.fontSize;
+    this.descriptionNotesField.typeInPadding = InputFieldMorph.prototype.typeInPadding;
+    this.descriptionNotesField.contrast = InputFieldMorph.prototype.contrast;
+    this.descriptionNotesField.drawNew = InputFieldMorph.prototype.drawNew;
+    this.descriptionNotesField.drawRectBorder = InputFieldMorph.prototype.drawRectBorder;
+
+    this.descriptionNotesField.acceptsDrops = false;
+    this.descriptionNotesField.contents.acceptsDrops = false;
+
+    this.descriptionNotesText = new TextMorph('description');
+    this.descriptionNotesText.isEditable = false;
+    this.descriptionNotesText.enableSelecting();
+
+    this.descriptionNotesField.isTextLineWrapping = true;
+    this.descriptionNotesField.padding = 3;
+    this.descriptionNotesField.setContents(this.descriptionNotesText);
+    this.descriptionNotesField.setWidth(200);
+
+    this.body.add(this.descriptionNotesField);
+
+    this.informationNotesField = new ScrollFrameMorph();
+    this.informationNotesField.fixLayout = nop;
+
+    this.informationNotesField.edge = InputFieldMorph.prototype.edge;
+    this.informationNotesField.fontSize = InputFieldMorph.prototype.fontSize;
+    this.informationNotesField.typeInPadding = InputFieldMorph.prototype.typeInPadding;
+    this.informationNotesField.contrast = InputFieldMorph.prototype.contrast;
+    this.informationNotesField.drawNew = InputFieldMorph.prototype.drawNew;
+    this.informationNotesField.drawRectBorder = InputFieldMorph.prototype.drawRectBorder;
+
+    this.informationNotesField.acceptsDrops = false;
+    this.informationNotesField.contents.acceptsDrops = false;
+
+    this.informationNotesText = new TextMorph('information');
+    this.informationNotesText.isEditable = false;
+    this.informationNotesText.enableSelecting();
+
+    this.informationNotesField.isTextLineWrapping = true;
+    this.informationNotesField.padding = 3;
+    this.informationNotesField.setContents(this.informationNotesText);
+    this.informationNotesField.setWidth(200);
+
+    this.body.add(this.informationNotesField);
+
+    if(this.task == 'browse') {
+        this.addButton('importModule', 'Import');
+        this.action = 'importModule';
+
+        this.addButton('downloadModule', 'Download');
+        this.action = 'downloadModule';
+    } else {
+        this.addButton('publishModule', 'Publish');
+        this.action = 'publishModule';
+    }
+
+    this.addButton('cancel', 'Cancel');
+
+    this.addModules();
+    this.addBlocks();
+    this.setWidth(this.padding + this.modulesListField.width() + this.padding + 200 + this.padding + 200 + this.padding);
+    this.setHeight(400);
+    this.fixListFieldItemColors();
+    this.fixLayout();
+};
+
+ModuleDialogMorph.prototype.popUp = function (wrrld) {
+    var world = wrrld || this.ide.world();
+    if (world) {
+        ModuleDialogMorph.uber.popUp.call(this, world);
+        this.handle = new HandleMorph(
+                this,
+                350,
+                300,
+                this.corner,
+                this.corner
+                );
+    }
+};
+
+// ModuleDialogMorph list field control
+
+ModuleDialogMorph.prototype.fixListFieldItemColors = function () {
+    // remember to always fixLayout() afterwards for the changes
+    // to take effect
+    var myself = this;
+    this.modulesListField.contents.children[0].alpha = 0;
+    this.modulesListField.contents.children[0].children.forEach(function (item) {
+        item.pressColor = myself.titleBarColor.darker(20);
+        item.color = new Color(0, 0, 0, 0);
+        item.noticesTransparentClick = true;
+    });
+
+    this.blocksListField.contents.children[0].alpha = 0;
+    this.blocksListField.contents.children[0].children.forEach(function (item) {
+        item.pressColor = myself.titleBarColor.darker(20);
+        item.color = new Color(0, 0, 0, 0);
+        item.noticesTransparentClick = true;
+    });
+};
+
+ModuleDialogMorph.prototype.requestBlockFile = function (module, block) {
+    var myself = this;
+    SnapCloud.getBlockFile(
+            module,
+            block,
+            function (blockContents) {
+                myself.ide.saveXMLAs(blockContents, 'test');
+                /*
+                   myself.moduleList = [];
+                   var moduleList = JSON.parse(moduleListJSON);
+                   moduleList.forEach(function(module){
+                   myself.moduleList.push(module.name);
+                   });
+                   myself.addModules();
+                   myself.fixListFieldItemColors();
+                   myself.fixLayout();*/
+            },
+            myself.ide.cloudError()
+            );
+};
+
+ModuleDialogMorph.prototype.requestModules = function () {
+    var myself = this;
+    SnapCloud.getModuleList(
+            function (moduleListJSON) {
+                myself.moduleList = [];
+                var moduleList = JSON.parse(moduleListJSON);
+                moduleList.forEach(function(module){
+                    myself.moduleList.push(module.name);
+                });
+                myself.addModules();
+                myself.fixListFieldItemColors();
+                myself.fixLayout();
+            },
+            myself.ide.cloudError()
+            );
+}
+
+ModuleDialogMorph.prototype.requestBlocks = function (module) {
+    var myself = this;
+    SnapCloud.getBlockList(
+            module,
+            function (blockListJSON) {
+
+                myself.blockList = [];
+                var blockList = JSON.parse(blockListJSON);
+                blockList.forEach(function(block){
+                    if(block.name == 'info.txt') {
+                        if(myself.descriptionNotesText)
+                            myself.descriptionNotesText.destroy();
+
+                        myself.descriptionNotesText = new TextMorph('info');
+                        myself.descriptionNotesText.isEditable = false;
+                        myself.descriptionNotesText.enableSelecting();
+
+                        myself.descriptionNotesField.setContents(myself.descriptionNotesText);
+                    }
+                    else myself.blockList.push(block.name);
+                });
+                myself.addBlocks();
+                myself.fixListFieldItemColors();
+                myself.fixLayout();
+            },
+        myself.ide.cloudError()
+            );
+}
+
+ModuleDialogMorph.prototype.addModules = function () {
+    //var module = this.checkBox.state ? 'clicked' : 'unclicked';
+    //this.modulesListField = new ListMorph(['1234567890',module,'1',this.nameField.getValue(),'1','1','1','1','1','1','1','1','1','1','1','1','1']);
+
+    if(this.modulesListField)
+        this.modulesListField.destroy();
+
+    this.modulesListField = new ListMorph(this.moduleList);
+    this.modulesListField.fixLayout = nop;
+    this.modulesListField.edge = InputFieldMorph.prototype.edge;
+    this.modulesListField.fontSize = InputFieldMorph.prototype.fontSize;
+    this.modulesListField.typeInPadding = InputFieldMorph.prototype.typeInPadding;
+    this.modulesListField.contrast = InputFieldMorph.prototype.contrast;
+    this.modulesListField.drawNew = InputFieldMorph.prototype.drawNew;
+    this.modulesListField.drawRectBorder = InputFieldMorph.prototype.drawRectBorder;
+    this.modulesListField.setWidth (150);
+
+    var myself = this;
+    this.modulesListField.action = function (item) {
+        myself.moduleBlockSelection[0] = item;
+        myself.moduleBlockSelection[1] = null;
+        /*if(myself.descriptionNotesText)
+          myself.descriptionNotesText.destroy();
+
+          myself.descriptionNotesText = new TextMorph(item);
+          myself.descriptionNotesText.isEditable = false;
+          myself.descriptionNotesText.enableSelecting();
+
+          myself.descriptionNotesField.setContents(myself.descriptionNotesText);*/
+        myself.requestBlocks(item);
+    }
+    this.body.add(this.modulesListField);
+}
+
+ModuleDialogMorph.prototype.addBlocks = function () {
+    if(this.blocksListField)
+        this.blocksListField.destroy();
+
+    this.blocksListField = new ListMorph(this.blockList);
+    this.blocksListField.fixLayout = nop;
+    this.blocksListField.edge = InputFieldMorph.prototype.edge;
+    this.blocksListField.fontSize = InputFieldMorph.prototype.fontSize;
+    this.blocksListField.typeInPadding = InputFieldMorph.prototype.typeInPadding;
+    this.blocksListField.contrast = InputFieldMorph.prototype.contrast;
+    this.blocksListField.drawNew = InputFieldMorph.prototype.drawNew;
+    this.blocksListField.drawRectBorder = InputFieldMorph.prototype.drawRectBorder;
+    this.blocksListField.setWidth (150);
+
+    var myself = this;
+    this.blocksListField.action = function (item) {
+        myself.moduleBlockSelection[1] = item;
+        /*if(myself.descriptionNotesText)
+          myself.descriptionNotesText.destroy();
+
+          myself.descriptionNotesText = new TextMorph(item);
+          myself.descriptionNotesText.isEditable = false;
+          myself.descriptionNotesText.enableSelecting();
+
+        //myself.descriptionNotesField.setContents(myself.blockList);//myself.descriptionNotesText);*/
+        //if(myself.moduleSelected != null)
+        //myself.requestBlockFile(myself.moduleSelected,item);
+    }
+
+    this.body.add(this.blocksListField);
+}
+
+
+ModuleDialogMorph.prototype.importModule = function () {
+
+
+}
+
+ModuleDialogMorph.prototype.downloadModule = function () {
+    if(this.moduleBlockSelection[0]!=null && this.moduleBlockSelection[1]!=null) {
+        this.requestBlockFile(this.moduleBlockSelection[0], this.moduleBlockSelection[1]);
+    }
+}
+
+ModuleDialogMorph.prototype.publishModule = function () {
+
+
+}
+
+// ModuleDialogMorph layout
+
+ModuleDialogMorph.prototype.fixLayout = function () {
+    var th = fontHeight(this.titleFontSize) + this.titlePadding * 2,
+    thin = this.padding / 2,
+    oldFlag = Morph.prototype.trackChanges;
+
+    Morph.prototype.trackChanges = false;
+
+    if (this.buttons && (this.buttons.children.length > 0)) {
+        this.buttons.fixLayout();
+    }
+
+    if (this.body) {
+        this.setWidth(Math.max(this.width(), this.modulesListField.width() + this.blocksListField.width() + 200));
+        this.setHeight(Math.max(this.height(), 400));
+        this.body.setPosition(this.position().add(new Point(
+                        this.padding,
+                        th + this.padding
+                        )));
+        this.body.setExtent(new Point(
+                    this.width() - this.padding * 2,
+                    this.height() - this.padding * 3 - th - this.buttons.height()
+                    ));
+
+        //this.srcBar.setPosition(this.body.position());
+        //this.nameField == null???
+        if (this.nameField) {
+            this.task == 'browse' ? this.nameField.setTop(this.checkBox.bottom() + this.padding) : this.nameField.setTop(this.body.top() + this.padding);
+            this.nameField.setWidth(
+                    this.modulesListField.width()
+                    );
+            this.nameField.setLeft(this.body.left());
+            this.nameField.drawNew();
+        }
+        // this.paddig = 14
+
+        this.modulesListField.setLeft(this.nameField.left());
+        this.modulesListField.setWidth(
+                this.modulesListField.width() // width constante  4cm mas o menos
+                /*this.body.width()
+                  - this.blocksListField.width()
+                  - this.padding
+                  - thin*/
+                );
+        this.modulesListField.contents.children[0].adjustWidths();
+
+        if (this.nameField) {
+            this.modulesListField.setTop(this.nameField.bottom() + this.padding);
+            this.modulesListField.setHeight(
+                    this.body.bottom() - this.nameField.bottom() - this.padding
+                    );
+        } else {
+            this.modulesListField.setTop(this.nameField.bottom());
+            this.modulesListField.setHeight(this.body.height());
+        }
+
+        //this.blocksListField.setRight(this.body.right());
+        this.blocksListField.setLeft(this.modulesListField.right() + this.padding);
+        /*if (this.nameField) {
+          this.blocksListField.setTop(this.nameField.bottom() + this.padding);
+          } else {
+          this.blocksListField.setTop(this.body.top());
+          }*/
+        this.blocksListField.setTop(this.body.top());
+        this.blocksListField.setHeight(this.body.height());
+
+        /*this.descriptionNotesField.setTop(this.blocksListField.bottom() + thin);
+          this.descriptionNotesField.setLeft(this.blocksListField.left());
+          this.descriptionNotesField.setHeight(
+          this.body.bottom() - this.blocksListField.bottom() - thin
+          );*/
+
+        this.descriptionNotesField.setTop(this.blocksListField.top());
+        //this.descriptionNotesField.setLeft(this.blocksListField.left() + this.blocksListField.width() + this.padding);
+        this.descriptionNotesField.setHeight(
+                this.blocksListField.height()
+                );
+        this.blocksListField.contents.children[0].adjustWidths();
+        //this.descriptionNotesField.setLeft(this.blocksListField.right() + this.padding);
+        this.descriptionNotesField.setWidth(this.body.right() - this.blocksListField.right() - this.padding);
+        this.descriptionNotesField.setLeft(this.blocksListField.right() + this.padding);
+        this.descriptionNotesField.setHeight(this.body.height() - 100 - this.padding);
+        this.descriptionNotesField.setTop(this.blocksListField.top());
+
+        this.informationNotesField.setWidth(this.descriptionNotesField.width());
+        this.informationNotesField.setLeft(this.descriptionNotesField.left());
+        this.informationNotesField.setHeight(100);
+        this.informationNotesField.setTop(this.descriptionNotesField.bottom() + this.padding);
+    }
+
+    if (this.label) {
+        this.label.setCenter(this.center());
+        this.label.setTop(this.top() + (th - this.label.height()) / 2);
+    }
+
+    if (this.buttons && (this.buttons.children.length > 0)) {
+        this.buttons.setCenter(this.center());
+        this.buttons.setBottom(this.bottom() - this.padding);
+    }
+
+    Morph.prototype.trackChanges = oldFlag;
+    this.changed();
+};
+    ///////////////////////////////////////// EDUARDO ///////////////////////////////////////////////////////
 
 IDE_Morph.prototype.resourceURL = function () {
     // Take in variadic inputs that represent an a nested folder structure.
