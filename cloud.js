@@ -189,6 +189,91 @@ Cloud.prototype.getPublicProject = function (
     }
 };
 
+// EDUARDO
+
+Cloud.prototype.getModuleList = function (callBack, errorCall) {
+    var request = new XMLHttpRequest(),
+    myself = this;
+    try {
+        request.open(
+            "GET",
+            "https://api.github.com/repos/MTesting/Test/contents/Test",
+            true
+        );
+        request.setRequestHeader(
+            "Content-Type",
+            "application/x-www-form-urlencoded"
+        );
+        request.onreadystatechange = function () {
+            if (request.readyState == 4) {
+                callBack.call(
+                    null,
+                    request.responseText
+                );
+            }
+        };
+        request.send(null);
+    } catch (err) {
+        errorCall.call(this, err.toString(), 'Snap!Cloud');
+    }
+}
+
+Cloud.prototype.getBlockList = function (module, callBack, errorCall) {
+    var request = new XMLHttpRequest(),
+    myself = this;
+    try {
+        request.open(
+            "GET",
+            "https://api.github.com/repos/MTesting/Test/contents/Test/" + module,
+            true
+        );
+        request.setRequestHeader(
+            "Content-Type",
+            "application/x-www-form-urlencoded"
+        );
+        request.onreadystatechange = function () {
+            if (request.readyState == 4) {
+                callBack.call(
+                    null,
+                    request.responseText
+                );
+            }
+        };
+        request.send(null);
+    } catch (err) {
+        errorCall.call(this, err.toString(), 'Snap!Cloud');
+    }
+}
+
+Cloud.prototype.getBlockFile = function (module, block, callBack, errorCall) {
+    var request = new XMLHttpRequest(),
+    myself = this;
+    try {
+        request.open(
+            "GET",
+            "https://raw.githubusercontent.com/MTesting/Test/master/Test/"+module+"/"+block,
+            true
+        );
+        request.setRequestHeader(
+            "Content-Type",
+            "application/x-www-form-urlencoded"
+        );
+        request.onreadystatechange = function () {
+            if (request.readyState == 4) {
+                callBack.call(
+                    null,
+                    request.responseText
+                );
+            }
+        };
+        request.send(null);
+    } catch (err) {
+        errorCall.call(this, err.toString(), 'Snap!Cloud');
+    }
+}
+
+//EDUARDO
+
 Cloud.prototype.resetPassword = function (
     username,
     callBack,
