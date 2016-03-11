@@ -191,7 +191,7 @@ Cloud.prototype.getPublicProject = function (
 
 // EDUARDO
 
-Cloud.prototype.getModuleList = function (callBack, errorCall) {
+Cloud.prototype.getModuleList = function (callBack, errorCall) { //////!!! si es contra la API de Snap! -> callService!!!!
     var request = new XMLHttpRequest(),
     myself = this;
     try {
@@ -218,40 +218,13 @@ Cloud.prototype.getModuleList = function (callBack, errorCall) {
     }
 }
 
-Cloud.prototype.getBlockList = function (module, callBack, errorCall) {
+Cloud.prototype.getModuleContents = function (module,callBack, errorCall) {
     var request = new XMLHttpRequest(),
     myself = this;
     try {
         request.open(
             "GET",
-            "https://api.github.com/repos/MTesting/Test/contents" + module,
-            true
-        );
-        request.setRequestHeader(
-            "Content-Type",
-            "application/x-www-form-urlencoded"
-        );
-        request.onreadystatechange = function () {
-            if (request.readyState == 4) {
-                callBack.call(
-                    null,
-                    request.responseText
-                );
-            }
-        };
-        request.send(null);
-    } catch (err) {
-        errorCall.call(this, err.toString(), 'Snap!Cloud');
-    }
-}
-
-Cloud.prototype.getBlockFile = function (module, block, callBack, errorCall) {
-    var request = new XMLHttpRequest(),
-    myself = this;
-    try {
-        request.open(
-            "GET",
-            "https://raw.githubusercontent.com/MTesting/Test/master/"+module+"/"+block,
+            "https://raw.githubusercontent.com/MTesting/Test/master/" + module + "/" + module + ".xml",
             true
         );
         request.setRequestHeader(

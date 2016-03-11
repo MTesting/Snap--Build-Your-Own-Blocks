@@ -2769,20 +2769,17 @@ ModuleDialogMorph.prototype.init = function (ide,task) {
     this.ide = ide;
     this.task = task || 'browse'; // String describing what do do (browse, publish, update)
     this.moduleList =[];
-    this.blockList = [];
-    this.moduleBlockSelection = [null,null];
-    this.requestModules(); // [{name: }]
 
     this.handle = null;
     this.nameField = null; /* input text */
     this.checkBox = null; /* only my modules */
     this.modulesListField = null;
-    this.blocksListField = null; /* EN COMUN */
     this.descriptionNotesText = null;
     this.informationNotesText = null;
     this.descriptionNotesField = null;
     this.informationNotesField = null;
     this.deleteButton = null;
+    this.blocksScrollFrame = null;
 
     // initialize inherited properties:
     ModuleDialogMorph.uber.init.call(
@@ -2812,20 +2809,13 @@ ModuleDialogMorph.prototype.buildContents = function () {
     if (this.task === 'browse') {
         this.checkBox = new ToggleMorph(
                 'checkbox',
-                null,
+                myself,
                 function () {
-                    //myself.currentSprite.isDraggable =
-                    //    !myself.currentSprite.isDraggable;
-                    this.state = myself.checkBox.state = !myself.checkBox.state;
-                    myself.addModules();
-                    myself.fixListFieldItemColors();
-                    myself.fixLayout();
-                    myself.requestModules(); // [{name: }]
+                    this.state = !this.state;
                 },
                 localize('only my modules'),
                 function () {
-                    this.state = this.state === undefined ? false : this.state;
-                    return this.state;
+                    return this.state == undefined ? false : this.state;
                 }
                 );
         this.body.add(this.checkBox);
@@ -2836,36 +2826,19 @@ ModuleDialogMorph.prototype.buildContents = function () {
             if (child instanceof StringMorph) {
                 // Filtrar per nom
                 // Revisar!
-                myself.moduleList.filter(
-                        function(each) { 
+                filteredModuleList = myself.moduleList.filter(
+                        function(each) {
                             return each.indexOf(child.text) > -1;
                         });
+                 console.log('-'+child.text+'-');
+                 myself.addModules(filteredModuleList);
+                 myself.fixListFieldItemColors();
+                 myself.fixLayout();
             }
         }
 
         this.body.add(this.nameField);
     }
-
-    /*this.modulesListField = new ListMorph(['1234567890',clicked,'1','1','1','1','1','1','1','1','1','1','1','1','1','1','1']);
-      this.fixListFieldItemColors();
-      this.modulesListField.fixLayout = nop;
-      this.modulesListField.edge = InputFieldMorph.prototype.edge;
-      this.modulesListField.fontSize = InputFieldMorph.prototype.fontSize;
-      this.modulesListField.typeInPadding = InputFieldMorph.prototype.typeInPadding;
-      this.modulesListField.contrast = InputFieldMorph.prototype.contrast;
-      this.modulesListField.drawNew = InputFieldMorph.prototype.drawNew;
-      this.modulesListField.drawRectBorder = InputFieldMorph.prototype.drawRectBorder;
-      this.modulesListField.setWidth (150);
-      this.body.add(this.modulesListField);*/
-
-    /*if (this.task === 'save') {
-      thumbnail = this.ide.stage.thumbnail(
-      SnapSerializer.prototype.thumbnailSize
-      );
-      this.blocksListField.texture = null;
-      this.blocksListField.cachedTexture = thumbnail;
-      this.blocksListField.drawCachedTexture();
-      }*/
 
     this.descriptionNotesField = new ScrollFrameMorph();
     this.descriptionNotesField.fixLayout = nop;
@@ -2880,7 +2853,7 @@ ModuleDialogMorph.prototype.buildContents = function () {
     this.descriptionNotesField.acceptsDrops = false;
     this.descriptionNotesField.contents.acceptsDrops = false;
 
-    this.descriptionNotesText = new TextMorph('description');
+    this.descriptionNotesText = new TextMorph('Description...');
     this.descriptionNotesText.isEditable = false;
     this.descriptionNotesText.enableSelecting();
 
@@ -2904,7 +2877,7 @@ ModuleDialogMorph.prototype.buildContents = function () {
     this.informationNotesField.acceptsDrops = false;
     this.informationNotesField.contents.acceptsDrops = false;
 
-    this.informationNotesText = new TextMorph('information');
+    this.informationNotesText = new TextMorph('Information...');
     this.informationNotesText.isEditable = false;
     this.informationNotesText.enableSelecting();
 
@@ -2928,13 +2901,88 @@ ModuleDialogMorph.prototype.buildContents = function () {
 
     this.addButton('cancel', 'Cancel');
 
-    this.addModules();
-    this.addBlocks();
+    this.requestModules();
+    this.addModules(myself.moduleList);
+    this.buildCanvas();
     this.setWidth(this.padding + this.modulesListField.width() + this.padding + 200 + this.padding + 200 + this.padding);
     this.setHeight(400);
     this.fixListFieldItemColors();
     this.fixLayout();
 };
+
+ModuleDialogMorph.prototype.buildCanvas = function(blocks) {
+    if(!blocks)
+        blocks = [];
+
+    var x, y, checkBox,lastCat,
+        myself = this,
+        padding = 4;
+        this.blocks = blocks;
+
+    if (this.blocksScrollFrame)
+        this.blocksScrollFrame.destroy();
+
+    // create plaette
+    this.blocksScrollFrame = new ScrollFrameMorph(
+        null,
+        null,
+        SpriteMorph.prototype.sliderColor
+    );
+
+    this.blocksScrollFrame.color = SpriteMorph.prototype.paletteColor;
+    this.blocksScrollFrame.padding = padding;
+    this.blocksScrollFrame.isDraggable = false;
+    this.blocksScrollFrame.acceptsDrops = false;
+    this.blocksScrollFrame.contents.acceptsDrops = false;
+
+
+    // populate palette
+    x = this.blocksScrollFrame.left() + padding;
+    y = this.blocksScrollFrame.top() + padding;
+
+    this.blocksScrollFrame.scrollX(padding);
+    this.blocksScrollFrame.scrollY(padding);
+
+
+    SpriteMorph.prototype.categories.forEach(function (category) {
+        myself.blocks.forEach(function (definition) {
+            if (definition.category === category) {
+                if (lastCat && (category !== lastCat)) {
+                    y += padding;
+                }
+                lastCat = category;
+                block = definition.templateInstance();
+                checkBox = new ToggleMorph(
+                    'checkbox',
+                    myself,
+                    function () {
+                        console.log("checkbox pressed");
+                        this.state = !this.state;
+                    },
+                    null,
+                    function () {
+                        return this.state;
+                    },
+                    null,
+                    null,
+                    null,
+                    block.fullImage()
+                );
+                checkBox.setPosition(new Point(
+                    x,
+                    y + (checkBox.top() - checkBox.toggleElement.top())
+                ));
+                myself.blocksScrollFrame.addContents(checkBox);
+                y += checkBox.fullBounds().height() + padding;
+            }
+        });
+    });
+
+    this.blocksScrollFrame.scrollX(padding);
+    this.blocksScrollFrame.scrollY(padding);
+
+    this.body.add(this.blocksScrollFrame);
+}
 
 ModuleDialogMorph.prototype.popUp = function (wrrld) {
     var world = wrrld || this.ide.world();
@@ -2962,37 +3010,11 @@ ModuleDialogMorph.prototype.fixListFieldItemColors = function () {
         item.color = new Color(0, 0, 0, 0);
         item.noticesTransparentClick = true;
     });
-
-    this.blocksListField.contents.children[0].alpha = 0;
-    this.blocksListField.contents.children[0].children.forEach(function (item) {
-        item.pressColor = myself.titleBarColor.darker(20);
-        item.color = new Color(0, 0, 0, 0);
-        item.noticesTransparentClick = true;
-    });
-};
-
-ModuleDialogMorph.prototype.requestBlockFile = function (module, block) {
-    var myself = this;
-    SnapCloud.getBlockFile(
-            module,
-            block,
-            function (blockContents) {
-                myself.ide.saveXMLAs(blockContents, 'test');
-                /*
-                   myself.moduleList = [];
-                   var moduleList = JSON.parse(moduleListJSON);
-                   moduleList.forEach(function(module){
-                   myself.moduleList.push(module.name);
-                   });
-                   myself.addModules();
-                   myself.fixListFieldItemColors();
-                   myself.fixLayout();*/
-            },
-            myself.ide.cloudError()
-            );
 };
 
 ModuleDialogMorph.prototype.requestModules = function () {
+    console.log("modules requested!");
+
     var myself = this;
     SnapCloud.getModuleList(
             function (moduleListJSON) {
@@ -3001,7 +3023,7 @@ ModuleDialogMorph.prototype.requestModules = function () {
                 moduleList.forEach(function(module){
                     myself.moduleList.push(module.name);
                 });
-                myself.addModules();
+                myself.addModules(myself.moduleList);
                 myself.fixListFieldItemColors();
                 myself.fixLayout();
             },
@@ -3009,43 +3031,51 @@ ModuleDialogMorph.prototype.requestModules = function () {
             );
 }
 
-ModuleDialogMorph.prototype.requestBlocks = function (module) {
+ModuleDialogMorph.prototype.requestModuleContents = function (module){
+    console.log("module contents requested!");
+
     var myself = this;
-    SnapCloud.getBlockList(
-            module,
-            function (blockListJSON) {
+    SnapCloud.getModuleContents(
+        module,
+        function (moduleContents) {
 
-                myself.blockList = [];
-                var blockList = JSON.parse(blockListJSON);
-                blockList.forEach(function(block){
-                    if(block.name == 'info.txt') {
-                        if(myself.descriptionNotesText)
-                            myself.descriptionNotesText.destroy();
+            var xmlModuleContents = new XML_Element();
+            xmlModuleContents.parseString(moduleContents);
 
-                        myself.descriptionNotesText = new TextMorph('info');
-                        myself.descriptionNotesText.isEditable = false;
-                        myself.descriptionNotesText.enableSelecting();
+            if(myself.descriptionNotesText)
+                myself.descriptionNotesText.destroy();
 
-                        myself.descriptionNotesField.setContents(myself.descriptionNotesText);
-                    }
-                    else myself.blockList.push(block.name);
-                });
-                myself.addBlocks();
-                myself.fixListFieldItemColors();
-                myself.fixLayout();
-            },
+            myself.descriptionNotesText = new TextMorph(xmlModuleContents.require('description').contents+'\nAuthor: '+xmlModuleContents.attributes['author']);
+            myself.descriptionNotesText.isEditable = false;
+            myself.descriptionNotesText.enableSelecting();
+
+            myself.descriptionNotesField.setContents(myself.descriptionNotesText);
+
+            if(myself.informationNotesText)
+                myself.informationNotesText.destroy();
+
+            myself.informationNotesText = new TextMorph(xmlModuleContents.require('information').contents);
+            myself.informationNotesText.isEditable = false;
+            myself.informationNotesText.enableSelecting();
+
+            myself.informationNotesField.setContents(myself.informationNotesText);
+
+            var blocks = myself.ide.serializer.loadBlocks(xmlModuleContents.require('blocks').toString());
+            myself.buildCanvas(blocks);
+
+            myself.fixLayout();
+
+        },
         myself.ide.cloudError()
-            );
+    );
 }
 
-ModuleDialogMorph.prototype.addModules = function () {
-    //var module = this.checkBox.state ? 'clicked' : 'unclicked';
-    //this.modulesListField = new ListMorph(['1234567890',module,'1',this.nameField.getValue(),'1','1','1','1','1','1','1','1','1','1','1','1','1']);
+ModuleDialogMorph.prototype.addModules = function (modules) {
 
     if(this.modulesListField)
         this.modulesListField.destroy();
 
-    this.modulesListField = new ListMorph(this.moduleList);
+    this.modulesListField = new ListMorph(modules);
     this.modulesListField.fixLayout = nop;
     this.modulesListField.edge = InputFieldMorph.prototype.edge;
     this.modulesListField.fontSize = InputFieldMorph.prototype.fontSize;
@@ -3057,53 +3087,60 @@ ModuleDialogMorph.prototype.addModules = function () {
 
     var myself = this;
     this.modulesListField.action = function (item) {
-        myself.moduleBlockSelection[0] = item;
-        myself.moduleBlockSelection[1] = null;
-        /*if(myself.descriptionNotesText)
-          myself.descriptionNotesText.destroy();
+        if(item=='(empty)') {
 
-          myself.descriptionNotesText = new TextMorph(item);
-          myself.descriptionNotesText.isEditable = false;
-          myself.descriptionNotesText.enableSelecting();
+            if(myself.descriptionNotesText)
+                myself.descriptionNotesText.destroy();
 
-          myself.descriptionNotesField.setContents(myself.descriptionNotesText);*/
-        myself.requestBlocks(item);
+            myself.descriptionNotesText = new TextMorph('Description...');
+            myself.descriptionNotesText.isEditable = false;
+            myself.descriptionNotesText.enableSelecting();
+
+            myself.descriptionNotesField.setContents(myself.descriptionNotesText);
+
+            if(myself.informationNotesText)
+                myself.informationNotesText.destroy();
+
+            myself.informationNotesText = new TextMorph('Information...');
+            myself.informationNotesText.isEditable = false;
+            myself.informationNotesText.enableSelecting();
+
+            myself.informationNotesField.setContents(myself.informationNotesText);
+
+            myself.buildCanvas();
+            myself.fixLayout();
+
+
+            return;
+
+        }
+
+        myself.requestModuleContents(item);
+
+        if(myself.descriptionNotesText)
+            myself.descriptionNotesText.destroy();
+
+        myself.descriptionNotesText = new TextMorph('Loading '+item+' Module...');
+        myself.descriptionNotesText.isEditable = false;
+        myself.descriptionNotesText.enableSelecting();
+
+        myself.descriptionNotesField.setContents(myself.descriptionNotesText);
+
+        if(myself.informationNotesText)
+            myself.informationNotesText.destroy();
+
+        myself.informationNotesText = new TextMorph('Loading ' +item+' Module');
+        myself.informationNotesText.isEditable = false;
+        myself.informationNotesText.enableSelecting();
+
+        myself.informationNotesField.setContents(myself.informationNotesText);
+
+        myself.buildCanvas();
+
+        myself.fixLayout();
     }
     this.body.add(this.modulesListField);
 }
-
-ModuleDialogMorph.prototype.addBlocks = function () {
-    if(this.blocksListField)
-        this.blocksListField.destroy();
-
-    this.blocksListField = new ListMorph(this.blockList);
-    this.blocksListField.fixLayout = nop;
-    this.blocksListField.edge = InputFieldMorph.prototype.edge;
-    this.blocksListField.fontSize = InputFieldMorph.prototype.fontSize;
-    this.blocksListField.typeInPadding = InputFieldMorph.prototype.typeInPadding;
-    this.blocksListField.contrast = InputFieldMorph.prototype.contrast;
-    this.blocksListField.drawNew = InputFieldMorph.prototype.drawNew;
-    this.blocksListField.drawRectBorder = InputFieldMorph.prototype.drawRectBorder;
-    this.blocksListField.setWidth (150);
-
-    var myself = this;
-    this.blocksListField.action = function (item) {
-        myself.moduleBlockSelection[1] = item;
-        /*if(myself.descriptionNotesText)
-          myself.descriptionNotesText.destroy();
-
-          myself.descriptionNotesText = new TextMorph(item);
-          myself.descriptionNotesText.isEditable = false;
-          myself.descriptionNotesText.enableSelecting();
-
-        //myself.descriptionNotesField.setContents(myself.blockList);//myself.descriptionNotesText);*/
-        //if(myself.moduleSelected != null)
-        //myself.requestBlockFile(myself.moduleSelected,item);
-    }
-
-    this.body.add(this.blocksListField);
-}
-
 
 ModuleDialogMorph.prototype.importModule = function () {
 
@@ -3111,9 +3148,7 @@ ModuleDialogMorph.prototype.importModule = function () {
 }
 
 ModuleDialogMorph.prototype.downloadModule = function () {
-    if(this.moduleBlockSelection[0]!=null && this.moduleBlockSelection[1]!=null) {
-        this.requestBlockFile(this.moduleBlockSelection[0], this.moduleBlockSelection[1]);
-    }
+
 }
 
 ModuleDialogMorph.prototype.publishModule = function () {
@@ -3135,7 +3170,7 @@ ModuleDialogMorph.prototype.fixLayout = function () {
     }
 
     if (this.body) {
-        this.setWidth(Math.max(this.width(), this.modulesListField.width() + this.blocksListField.width() + 200));
+        this.setWidth(Math.max(this.width(), this.modulesListField.width() + this.modulesListField.width() + 200));
         this.setHeight(Math.max(this.height(), 400));
         this.body.setPosition(this.position().add(new Point(
                         this.padding,
@@ -3178,33 +3213,18 @@ ModuleDialogMorph.prototype.fixLayout = function () {
             this.modulesListField.setHeight(this.body.height());
         }
 
-        //this.blocksListField.setRight(this.body.right());
-        this.blocksListField.setLeft(this.modulesListField.right() + this.padding);
-        /*if (this.nameField) {
-          this.blocksListField.setTop(this.nameField.bottom() + this.padding);
-          } else {
-          this.blocksListField.setTop(this.body.top());
-          }*/
-        this.blocksListField.setTop(this.body.top());
-        this.blocksListField.setHeight(this.body.height());
+        this.blocksScrollFrame.setLeft(this.modulesListField.right() + this.padding);
+        this.blocksScrollFrame.setTop(this.body.top());
+        this.blocksScrollFrame.setHeight(this.body.height());
+        this.blocksScrollFrame.setWidth(300);
 
-        /*this.descriptionNotesField.setTop(this.blocksListField.bottom() + thin);
-          this.descriptionNotesField.setLeft(this.blocksListField.left());
-          this.descriptionNotesField.setHeight(
-          this.body.bottom() - this.blocksListField.bottom() - thin
-          );*/
+        this.descriptionNotesField.setTop(this.blocksScrollFrame.top());
+        this.descriptionNotesField.setHeight(this.blocksScrollFrame.height());
 
-        this.descriptionNotesField.setTop(this.blocksListField.top());
-        //this.descriptionNotesField.setLeft(this.blocksListField.left() + this.blocksListField.width() + this.padding);
-        this.descriptionNotesField.setHeight(
-                this.blocksListField.height()
-                );
-        this.blocksListField.contents.children[0].adjustWidths();
-        //this.descriptionNotesField.setLeft(this.blocksListField.right() + this.padding);
-        this.descriptionNotesField.setWidth(this.body.right() - this.blocksListField.right() - this.padding);
-        this.descriptionNotesField.setLeft(this.blocksListField.right() + this.padding);
+        this.descriptionNotesField.setWidth(this.body.right() - this.blocksScrollFrame.right() - this.padding);
+        this.descriptionNotesField.setLeft(this.blocksScrollFrame.right() + this.padding);
         this.descriptionNotesField.setHeight(this.body.height() - 100 - this.padding);
-        this.descriptionNotesField.setTop(this.blocksListField.top());
+        this.descriptionNotesField.setTop(this.blocksScrollFrame.top());
 
         this.informationNotesField.setWidth(this.descriptionNotesField.width());
         this.informationNotesField.setLeft(this.descriptionNotesField.left());
