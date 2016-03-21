@@ -2769,6 +2769,8 @@ ModuleDialogMorph.prototype.init = function (ide,task) {
     this.ide = ide;
     this.task = task || 'browse'; // String describing what do do (browse, publish, update)
     this.moduleList =[];
+    this.xmlModuleContents;
+    this.blocks=[];
 
     this.handle = null;
     this.nameField = null; /* input text */
@@ -2910,14 +2912,13 @@ ModuleDialogMorph.prototype.buildContents = function () {
     this.fixLayout();
 };
 
-ModuleDialogMorph.prototype.buildCanvas = function(blocks) {
-    if(!blocks)
-        blocks = [];
+ModuleDialogMorph.prototype.buildCanvas = function() {
+    if(!this.blocks)
+        this.blocks = [];
 
     var x, y, checkBox,lastCat,
         myself = this,
         padding = 4;
-        this.blocks = blocks;
 
     if (this.blocksScrollFrame)
         this.blocksScrollFrame.destroy();
@@ -2936,6 +2937,7 @@ ModuleDialogMorph.prototype.buildCanvas = function(blocks) {
     this.blocksScrollFrame.contents.acceptsDrops = false;
 
 
+
     // populate palette
     x = this.blocksScrollFrame.left() + padding;
     y = this.blocksScrollFrame.top() + padding;
@@ -2951,29 +2953,38 @@ ModuleDialogMorph.prototype.buildCanvas = function(blocks) {
                     y += padding;
                 }
                 lastCat = category;
-                block = definition.templateInstance();
-                checkBox = new ToggleMorph(
-                    'checkbox',
-                    myself,
-                    function () {
-                        console.log("checkbox pressed");
-                        this.state = !this.state;
-                    },
-                    null,
-                    function () {
-                        return this.state;
-                    },
-                    null,
-                    null,
-                    null,
-                    block.fullImage()
-                );
-                checkBox.setPosition(new Point(
-                    x,
-                    y + (checkBox.top() - checkBox.toggleElement.top())
-                ));
-                myself.blocksScrollFrame.addContents(checkBox);
-                y += checkBox.fullBounds().height() + padding;
+                var block = definition.blockInstance();
+
+                if(myself.task != 'browse') {
+                    block.setPosition(new Point(
+                    x, y));
+                    myself.blocksScrollFrame.addContents(block);
+                    y += block.fullBounds().height() + padding;
+                } else {
+                    checkBox = new ToggleMorph(
+                        'checkbox',
+                        myself,
+                        function () {
+                            console.log("checkbox pressed");
+                            this.state = !this.state;
+                            myself.ide.stage.globalBlocks.push(definition);
+                        },
+                        null,
+                        function () {
+                            return this.state;
+                        },
+                        null,
+                        null,
+                        null,
+                        block.fullImage()
+                    );
+                    checkBox.setPosition(new Point(
+                        x,
+                        y + (checkBox.top() - checkBox.toggleElement.top())
+                    ));
+                    myself.blocksScrollFrame.addContents(checkBox);
+                    y += checkBox.fullBounds().height() + padding;
+                }
             }
         });
     });
@@ -3035,17 +3046,19 @@ ModuleDialogMorph.prototype.requestModuleContents = function (module){
     console.log("module contents requested!");
 
     var myself = this;
+    this.blocks = [];
+
     SnapCloud.getModuleContents(
         module,
         function (moduleContents) {
 
-            var xmlModuleContents = new XML_Element();
-            xmlModuleContents.parseString(moduleContents);
+            myself.xmlModuleContents = new XML_Element();
+            myself.xmlModuleContents.parseString(moduleContents);
 
             if(myself.descriptionNotesText)
                 myself.descriptionNotesText.destroy();
 
-            myself.descriptionNotesText = new TextMorph(xmlModuleContents.require('description').contents+'\nAuthor: '+xmlModuleContents.attributes['author']);
+            myself.descriptionNotesText = new TextMorph(myself.xmlModuleContents.require('description').contents+'\nAuthor: '+myself.xmlModuleContents.attributes['author']);
             myself.descriptionNotesText.isEditable = false;
             myself.descriptionNotesText.enableSelecting();
 
@@ -3054,14 +3067,15 @@ ModuleDialogMorph.prototype.requestModuleContents = function (module){
             if(myself.informationNotesText)
                 myself.informationNotesText.destroy();
 
-            myself.informationNotesText = new TextMorph(xmlModuleContents.require('information').contents);
+            myself.informationNotesText = new TextMorph(myself.xmlModuleContents.require('information').contents);
             myself.informationNotesText.isEditable = false;
             myself.informationNotesText.enableSelecting();
 
             myself.informationNotesField.setContents(myself.informationNotesText);
+            var blocks = myself.ide.serializer.loadBlocks(myself.xmlModuleContents.require('blocks').toString());
+            myself.blocks = blocks;
 
-            var blocks = myself.ide.serializer.loadBlocks(xmlModuleContents.require('blocks').toString());
-            myself.buildCanvas(blocks);
+            myself.buildCanvas();
 
             myself.fixLayout();
 
@@ -3110,7 +3124,6 @@ ModuleDialogMorph.prototype.addModules = function (modules) {
             myself.buildCanvas();
             myself.fixLayout();
 
-
             return;
 
         }
@@ -3142,13 +3155,57 @@ ModuleDialogMorph.prototype.addModules = function (modules) {
     this.body.add(this.modulesListField);
 }
 
+ModuleDialogMorph.prototype.rawImportModule = function () { //////////////OPTIMIZAR EL DE MAS ABAJO????????///
+    var myself = this;
+    this.blocks.forEach(function(definition){
+        myself.ide.stage.globalBlocks.push(definition);
+    });
+
+    this.blocks.forEach(function(definition){
+        myself.ide.stage.replaceDoubleDefinitionsFor(definition);
+    });
+
+    this.ide.flushPaletteCache();
+    this.ide.refreshPalette();
+
+    this.destroy();///////////////////////////////////////////////////ERROR CON GLOBALBLOCKS!!!!!!!!!///////////////////
+}
+
+
 ModuleDialogMorph.prototype.importModule = function () {
+    var myself = this;
+//-------------------------------------------------FIND?¿??¿?¿?----------------------------????????????????????
+    var blocks = this.blocks.filter(function (definition) {
+                return (myself.ide.stage.globalBlocks.filter(function(globalDefinition){
+                    return (globalDefinition.blockSpec() == definition.blockSpec());
+                }).length != 0);
+      });
+//-----------------------------------------------------------------------------?????????????????????
+    if (blocks.length == 0) {
+        this.rawImportModule();
+        this.ide.showMessage('Module imported',2);
+    } else {
+        var stringBlockList = '';
+        blocks.forEach(function(definition) {
+            stringBlockList += definition.blockSpec() + '\n';
+            });
 
-
+        this.ide.confirm(
+            'The blocks:\n---\n'+stringBlockList+' are already defined and will be overwritten\n---\nAre you sure you want to import the module?',
+            'Import module',
+            function () {
+                myself.rawImportModule();
+                myself.ide.showMessage('Module imported',2);
+            }
+         );
+    }
 }
 
 ModuleDialogMorph.prototype.downloadModule = function () {
+    var moduleName = this.xmlModuleContents
+    this.ide.saveXMLAs(this.xmlModuleContents.toString(),this.xmlModuleContents.attributes['name']);
 
+    this.destroy();
 }
 
 ModuleDialogMorph.prototype.publishModule = function () {
