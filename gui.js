@@ -2830,11 +2830,9 @@ ModuleDialogMorph.prototype.buildContents = function () {
 
     this.nameField.contents().childChanged = function(child) {
         if (child instanceof StringMorph) {
-            // Filtrar per nom
-            // Revisar!
             filteredModuleList = myself.moduleList.filter(
                     function(each) {
-                        return each.indexOf(child.text) > -1;
+                        return each.toUpperCase().indexOf(child.text.toUpperCase()) > -1;
                     });
              console.log('-'+child.text+'-');
              myself.addModules(filteredModuleList);
