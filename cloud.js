@@ -189,7 +189,7 @@ Cloud.prototype.getPublicProject = function (
     }
 };
 
-// EDUARDO
+// EDUARDO/////////////////////////////////////////////////////////7
 
 Cloud.prototype.getModuleList = function (callBack, errorCall) { //////!!! si es contra la API de Snap! -> callService!!!!
     var request = new XMLHttpRequest(),
@@ -224,7 +224,7 @@ Cloud.prototype.getModuleContents = function (module,callBack, errorCall) {
     try {
         request.open(
             "GET",
-            "https://raw.githubusercontent.com/MTesting/Test/master/" + module + "/" + module + ".xml",
+            "https://raw.githubusercontent.com/MTesting/Test/master/" + module + ".xml",
             true
         );
         request.setRequestHeader(
@@ -245,7 +245,7 @@ Cloud.prototype.getModuleContents = function (module,callBack, errorCall) {
     }
 }
 
-//EDUARDO
+//EDUARDO///////////////////////////////////////////////
 
 Cloud.prototype.resetPassword = function (
     username,

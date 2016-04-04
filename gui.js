@@ -2774,13 +2774,18 @@ ModuleDialogMorph.prototype.init = function (ide,task) {
 
     this.handle = null;
     this.nameField = null; /* input text */
-    this.checkBox = null; /* only my modules */
+    this.myModuleCheckBox = null; /* only my modules */
     this.modulesListField = null;
     this.descriptionNotesText = null;
     this.informationNotesText = null;
     this.descriptionNotesField = null;
     this.informationNotesField = null;
-    this.deleteButton = null;
+
+    this.importModuleButton = null;
+    this.downloadModuleButton = null;
+    this.updateModuleButton = null;
+    this.publishModuleButton = null;
+
     this.blocksScrollFrame = null;
 
     // initialize inherited properties:
@@ -2808,39 +2813,37 @@ ModuleDialogMorph.prototype.buildContents = function () {
     this.addBody(new Morph());
     this.body.color = this.color;
 
-    if (this.task === 'browse') {
-        this.checkBox = new ToggleMorph(
-                'checkbox',
-                myself,
-                function () {
-                    this.state = !this.state;
-                },
-                localize('only my modules'),
-                function () {
-                    return this.state == undefined ? false : this.state;
-                }
-                );
-        this.body.add(this.checkBox);
-
-        this.nameField = new InputFieldMorph('');
-
-        this.nameField.contents().childChanged = function(child) {
-            if (child instanceof StringMorph) {
-                // Filtrar per nom
-                // Revisar!
-                filteredModuleList = myself.moduleList.filter(
-                        function(each) {
-                            return each.indexOf(child.text) > -1;
-                        });
-                 console.log('-'+child.text+'-');
-                 myself.addModules(filteredModuleList);
-                 myself.fixListFieldItemColors();
-                 myself.fixLayout();
+    this.myModuleCheckBox = new ToggleMorph(
+            'checkbox',
+            myself,
+            function () {
+                this.state = !this.state;
+            },
+            localize('only my modules'),
+            function () {
+                return this.state == undefined ? false : this.state;
             }
-        }
+            );
+    this.body.add(this.myModuleCheckBox);
 
-        this.body.add(this.nameField);
+    this.nameField = new InputFieldMorph('');
+
+    this.nameField.contents().childChanged = function(child) {
+        if (child instanceof StringMorph) {
+            // Filtrar per nom
+            // Revisar!
+            filteredModuleList = myself.moduleList.filter(
+                    function(each) {
+                        return each.indexOf(child.text) > -1;
+                    });
+             console.log('-'+child.text+'-');
+             myself.addModules(filteredModuleList);
+             myself.fixListFieldItemColors();
+             myself.fixLayout();
+        }
     }
+
+    this.body.add(this.nameField);
 
     this.descriptionNotesField = new ScrollFrameMorph();
     this.descriptionNotesField.fixLayout = nop;
@@ -2855,7 +2858,8 @@ ModuleDialogMorph.prototype.buildContents = function () {
     this.descriptionNotesField.acceptsDrops = false;
     this.descriptionNotesField.contents.acceptsDrops = false;
 
-    this.descriptionNotesText = new TextMorph('Description...');
+    this.descriptionNotesText = new TextMorph();
+    this.descriptionNotesText.text = this.task == 'browse'? 'Description...' : 'Module name...';
     this.descriptionNotesText.isEditable = false;
     this.descriptionNotesText.enableSelecting();
 
@@ -2890,16 +2894,17 @@ ModuleDialogMorph.prototype.buildContents = function () {
 
     this.body.add(this.informationNotesField);
 
-    if(this.task == 'browse') {
-        this.addButton('importModule', 'Import');
-        this.action = 'importModule';
+    this.importModuleButton = this.addButton('importModule', 'Import');
+    this.action = 'importModule';
 
-        this.addButton('downloadModule', 'Download');
-        this.action = 'downloadModule';
-    } else {
-        this.addButton('publishModule', 'Publish');
-        this.action = 'publishModule';
-    }
+    this.downloadModuleButton = this.addButton('downloadModule', 'Download');
+    this.action = 'downloadModule';
+
+    this.updateModuleButton = this.addButton('updateModule', 'Update');
+    this.action = 'updateModule';
+
+    this.publishModuleButton = this.addButton('publishModule', 'Publish');
+    this.action = 'publishModule';
 
     this.addButton('cancel', 'Cancel');
 
@@ -2955,9 +2960,9 @@ ModuleDialogMorph.prototype.buildCanvas = function() {
                 lastCat = category;
                 var block = definition.blockInstance();
 
-                if(myself.task != 'browse') {
+                if(myself.task == 'browse') {
                     block.setPosition(new Point(
-                    x, y));
+                    x + 5, y + 5));
                     myself.blocksScrollFrame.addContents(block);
                     y += block.fullBounds().height() + padding;
                 } else {
@@ -3032,7 +3037,8 @@ ModuleDialogMorph.prototype.requestModules = function () {
                 myself.moduleList = [];
                 var moduleList = JSON.parse(moduleListJSON);
                 moduleList.forEach(function(module){
-                    myself.moduleList.push(module.name);
+
+                    myself.moduleList.push(module.name.substr(0, module.name.length - 4));
                 });
                 myself.addModules(myself.moduleList);
                 myself.fixListFieldItemColors();
@@ -3208,9 +3214,83 @@ ModuleDialogMorph.prototype.downloadModule = function () {
     this.destroy();
 }
 
+ModuleDialogMorph.prototype.updateModule = function () {
+
+
+}
+
 ModuleDialogMorph.prototype.publishModule = function () {
 
 
+}
+
+ModuleDialogMorph.prototype.applyTask = function (task) {
+    this.task = task || this.task;
+
+    var myself = this;
+
+    if (this.task == 'browse') {
+        if(SnapCloud.username) {
+            if(!this.myModuleCheckBox.show())
+                this.myModuleCheckBox.show();
+        } else {
+            if(this.myModuleCheckBox.isVisible)
+                this.myModuleCheckBox.hide();
+        }
+
+        if(!this.nameField.isVisible)
+            this.nameField.show();
+
+        if (!this.modulesListField.isVisible)
+            this.modulesListField.show();
+
+        this.descriptionNotesText.isEditable = false;
+        this.informationNotesText.isEditable = false;
+
+        myself.mouseClickLeft = nop;
+        myself.descriptionNotesText.mouseClickLeft = nop;
+        myself.informationNotesText.mouseClickLeft = nop;
+    } else {
+        if (this.myModuleCheckBox.isVisible)
+            this.myModuleCheckBox.hide();
+
+        if (this.nameField.isVisible)
+            this.nameField.hide();
+
+        if (this.modulesListField.isVisible)
+            this.modulesListField.hide();
+
+        this.descriptionNotesText.isEditable = true;
+
+        this.mouseClickLeft = function () {
+            if (!myself.descriptionNotesText.currentlySelected && myself.descriptionNotesText.text == '') {
+                myself.descriptionNotesText.text = 'Module name...';
+                myself.fixLayout();
+            }
+
+            if (!myself.informationNotesText.currentlySelected && myself.informationNotesText.text == '') {
+                myself.informationNotesText.text = 'Information...';
+                myself.fixLayout();
+            }
+        };
+
+        this.descriptionNotesText.mouseClickLeft = function () {
+            myself.mouseClickLeft();
+            if (myself.descriptionNotesText.text == 'Module name...') {
+                myself.descriptionNotesText.text = '';
+                myself.fixLayout();
+            }
+        }
+
+        this.informationNotesText.isEditable = true;
+        this.informationNotesText.mouseClickLeft = function () {
+            myself.mouseClickLeft();
+            if (myself.informationNotesText.text == 'Information...') {
+                myself.informationNotesText.text = '';
+                myself.fixLayout();
+            }
+        }
+    }
 }
 
 // ModuleDialogMorph layout
@@ -3223,6 +3303,18 @@ ModuleDialogMorph.prototype.fixLayout = function () {
     Morph.prototype.trackChanges = false;
 
     if (this.buttons && (this.buttons.children.length > 0)) {
+        if(this.task == 'browse') {
+            this.importModuleButton.show();
+            this.downloadModuleButton.show();
+            SnapCloud.username? this.updateModuleButton.show() : this.updateModuleButton.hide();
+            this.publishModuleButton.hide();
+        } else {
+            this.importModuleButton.hide();
+            this.downloadModuleButton.hide();
+            this.updateModuleButton.hide();
+            this.publishModuleButton.show();
+        }
+
         this.buttons.fixLayout();
     }
 
@@ -3238,54 +3330,37 @@ ModuleDialogMorph.prototype.fixLayout = function () {
                     this.height() - this.padding * 3 - th - this.buttons.height()
                     ));
 
-        //this.srcBar.setPosition(this.body.position());
-        //this.nameField == null???
-        if (this.nameField) {
-            this.task == 'browse' ? this.nameField.setTop(this.checkBox.bottom() + this.padding) : this.nameField.setTop(this.body.top() + this.padding);
-            this.nameField.setWidth(
-                    this.modulesListField.width()
-                    );
+        this.applyTask(this.task);
+
+        var leftPadding = (this.task == 'browse'? this.body.left() + this.modulesListField.width() + this.padding : this.body.left());
+        if(this.task == 'browse') {
+
+            SnapCloud.username? this.nameField.setTop(this.myModuleCheckBox.bottom() + this.padding) : this.nameField.setTop(this.body.top());
+            this.nameField.setWidth(this.modulesListField.width());
             this.nameField.setLeft(this.body.left());
             this.nameField.drawNew();
-        }
-        // this.paddig = 14
 
-        this.modulesListField.setLeft(this.nameField.left());
-        this.modulesListField.setWidth(
-                this.modulesListField.width() // width constante  4cm mas o menos
-                /*this.body.width()
-                  - this.blocksListField.width()
-                  - this.padding
-                  - thin*/
-                );
-        this.modulesListField.contents.children[0].adjustWidths();
+            // this.paddig = 14
 
-        if (this.nameField) {
-            this.modulesListField.setTop(this.nameField.bottom() + this.padding);
-            this.modulesListField.setHeight(
-                    this.body.bottom() - this.nameField.bottom() - this.padding
-                    );
-        } else {
-            this.modulesListField.setTop(this.nameField.bottom());
-            this.modulesListField.setHeight(this.body.height());
+            this.modulesListField.setLeft(this.body.left());
+            this.modulesListField.contents.children[0].adjustWidths();
+            this.modulesListField.setHeight(this.body.bottom() - this.nameField.bottom() - this.padding);
+            this.modulesListField.setBottom(this.body.bottom());
         }
 
-        this.blocksScrollFrame.setLeft(this.modulesListField.right() + this.padding);
+        this.blocksScrollFrame.setLeft(leftPadding);
         this.blocksScrollFrame.setTop(this.body.top());
         this.blocksScrollFrame.setHeight(this.body.height());
         this.blocksScrollFrame.setWidth(300);
 
-        this.descriptionNotesField.setTop(this.blocksScrollFrame.top());
-        this.descriptionNotesField.setHeight(this.blocksScrollFrame.height());
-
         this.descriptionNotesField.setWidth(this.body.right() - this.blocksScrollFrame.right() - this.padding);
         this.descriptionNotesField.setLeft(this.blocksScrollFrame.right() + this.padding);
-        this.descriptionNotesField.setHeight(this.body.height() - 100 - this.padding);
-        this.descriptionNotesField.setTop(this.blocksScrollFrame.top());
+        this.task == 'browse'? this.descriptionNotesField.setHeight(this.body.height() - 100 - this.padding) : this.descriptionNotesField.setHeight(25);
+        this.descriptionNotesField.setTop(this.body.top());
 
         this.informationNotesField.setWidth(this.descriptionNotesField.width());
         this.informationNotesField.setLeft(this.descriptionNotesField.left());
-        this.informationNotesField.setHeight(100);
+        this.informationNotesField.setHeight(this.body.bottom() - this.descriptionNotesField.bottom() - this.padding);
         this.informationNotesField.setTop(this.descriptionNotesField.bottom() + this.padding);
     }
 
