@@ -2952,10 +2952,6 @@ ModuleDialogMorph.prototype.buildCanvas = function() {
     SpriteMorph.prototype.categories.forEach(function (category) {
         myself.blocks.forEach(function (definition) {
             if (definition.category === category) {
-                if (lastCat && (category !== lastCat)) {
-                    y += padding;
-                }
-                lastCat = category;
                 var block = definition.blockInstance();
 
                 if(myself.task == 'browse') {
@@ -3182,7 +3178,7 @@ ModuleDialogMorph.prototype.importModule = function () {
     var blocks = this.blocks.filter(function (definition) {
                 return (myself.ide.stage.globalBlocks.filter(function(globalDefinition){
                     return (globalDefinition.blockSpec() == definition.blockSpec());
-                }).length != 0);
+                }).length != 0); ///////////////////////////CONTAINS¿??¿?¿?¿?/////////////¿¿¿¿¿¿¿¿
       });
 //-----------------------------------------------------------------------------?????????????????????
     if (blocks.length == 0) {
