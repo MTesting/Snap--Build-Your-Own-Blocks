@@ -2678,9 +2678,10 @@ IDE_Morph.prototype.projectMenu = function () {
     menu.addLine();
 
     menu.addItem('Browse modules','openModuleBrowser','browse all modules from community developers');
-    menu.addItem('Publish module','publishModuleBrowser','pubish and share your local module');
+    //if (SnapCloud.username)
+        menu.addItem('Publish module','publishModuleBrowser','pubish and share your local module');
 
-// EDUARDO
+// EDUARDO /////////////////////////////////////////////
 
     menu.addLine();
     menu.addItem(
@@ -2824,9 +2825,11 @@ ModuleDialogMorph.prototype.buildContents = function () {
                 return this.state == undefined ? false : this.state;
             }
             );
+
     this.body.add(this.myModuleCheckBox);
 
     this.nameField = new InputFieldMorph('');
+    this.nameField.setWidth(150);
 
     this.nameField.contents().childChanged = function(child) {
         if (child instanceof StringMorph) {
@@ -2840,6 +2843,8 @@ ModuleDialogMorph.prototype.buildContents = function () {
              myself.fixLayout();
         }
     }
+
+    this.addModules(myself.moduleList);
 
     this.body.add(this.nameField);
 
@@ -2888,7 +2893,7 @@ ModuleDialogMorph.prototype.buildContents = function () {
     this.informationNotesField.isTextLineWrapping = true;
     this.informationNotesField.padding = 3;
     this.informationNotesField.setContents(this.informationNotesText);
-    this.informationNotesField.setWidth(200);
+    this.informationNotesField.setWidth(this.descriptionNotesField.width());
 
     this.body.add(this.informationNotesField);
 
@@ -2906,10 +2911,15 @@ ModuleDialogMorph.prototype.buildContents = function () {
 
     this.addButton('cancel', 'Cancel');
 
-    this.requestModules();
-    this.addModules(myself.moduleList);
+    if (this.task == 'browse') this.requestModules();
+    else this.blocks = this.ide.stage.globalBlocks;
+
     this.buildCanvas();
-    this.setWidth(this.padding + this.modulesListField.width() + this.padding + 200 + this.padding + 200 + this.padding);
+    var leftPadding = 0;
+    if (this.task == 'browse')
+        leftPadding = this.padding + this.modulesListField.width();
+
+    this.setWidth(leftPadding + this.padding + this.blocksScrollFrame.width() + this.padding + this.descriptionNotesField.width() + this.padding);
     this.setHeight(400);
     this.fixListFieldItemColors();
     this.fixLayout();
@@ -2938,7 +2948,7 @@ ModuleDialogMorph.prototype.buildCanvas = function() {
     this.blocksScrollFrame.isDraggable = false;
     this.blocksScrollFrame.acceptsDrops = false;
     this.blocksScrollFrame.contents.acceptsDrops = false;
-
+    this.blocksScrollFrame.setWidth(300);
 
 
     // populate palette
@@ -2953,10 +2963,18 @@ ModuleDialogMorph.prototype.buildCanvas = function() {
         myself.blocks.forEach(function (definition) {
             if (definition.category === category) {
                 var block = definition.blockInstance();
-
                 if(myself.task == 'browse') {
                     block.setPosition(new Point(
                     x + 5, y + 5));
+
+                    /////////////////////////////////////////////////block info///////////
+                     new SpeechBubbleMorph(
+                            localize('block infor'),
+                            null,
+                            null,
+                            1
+                        ).popUp(myself.ide.world(), new Point (x + myself.body.left(), y + myself.body.top()));
+                    ////////////////////////////////////////////////////////block info////
                     myself.blocksScrollFrame.addContents(block);
                     y += block.fullBounds().height() + padding;
                 } else {
@@ -3097,7 +3115,7 @@ ModuleDialogMorph.prototype.addModules = function (modules) {
     this.modulesListField.contrast = InputFieldMorph.prototype.contrast;
     this.modulesListField.drawNew = InputFieldMorph.prototype.drawNew;
     this.modulesListField.drawRectBorder = InputFieldMorph.prototype.drawRectBorder;
-    this.modulesListField.setWidth (150);
+    this.modulesListField.setWidth (this.nameField.width());
 
     var myself = this;
     this.modulesListField.action = function (item) {
@@ -3224,8 +3242,8 @@ ModuleDialogMorph.prototype.applyTask = function (task) {
     var myself = this;
 
     if (this.task == 'browse') {
-        if(SnapCloud.username) {
-            if(!this.myModuleCheckBox.show())
+        if(!SnapCloud.username) {
+            if(!this.myModuleCheckBox.isVisible)
                 this.myModuleCheckBox.show();
         } else {
             if(this.myModuleCheckBox.isVisible)
@@ -3298,22 +3316,48 @@ ModuleDialogMorph.prototype.fixLayout = function () {
 
     if (this.buttons && (this.buttons.children.length > 0)) {
         if(this.task == 'browse') {
-            this.importModuleButton.show();
-            this.downloadModuleButton.show();
-            SnapCloud.username? this.updateModuleButton.show() : this.updateModuleButton.hide();
-            this.publishModuleButton.hide();
+            if (!this.importModuleButton.isVisible)
+                this.importModuleButton.show();
+
+            if (!this.downloadModuleButton.isVisible)
+                this.downloadModuleButton.show();
+
+            if (!SnapCloud.username) {
+                if (!this.updateModuleButton.isVisible)
+                    this.updateModuleButton.show();
+            } else {
+                if (this.updateModuleButton.isVisible)
+                    this.updateModuleButton.hide();
+            }
+
+            if (this.publishModuleButton.isVisible)
+                this.publishModuleButton.hide();
         } else {
-            this.importModuleButton.hide();
-            this.downloadModuleButton.hide();
-            this.updateModuleButton.hide();
-            this.publishModuleButton.show();
+            if (this.importModuleButton.isVisible)
+                this.importModuleButton.hide();
+
+            if (this.downloadModuleButton.isVisible)
+                this.downloadModuleButton.hide();
+
+            if (this.updateModuleButton.isVisible)
+                this.updateModuleButton.hide();
+
+            if (!this.publishModuleButton.isVisible)
+                this.publishModuleButton.show();
         }
 
         this.buttons.fixLayout();
     }
 
     if (this.body) {
-        this.setWidth(Math.max(this.width(), this.modulesListField.width() + this.modulesListField.width() + 200));
+        this.applyTask(this.task);
+
+        var leftPadding = 0;
+        if (this.task == 'browse')
+            leftPadding = this.modulesListField.width() + this.padding;
+
+        this.setWidth(Math.max(this.width(), leftPadding + this.padding + this.blocksScrollFrame.width() + this.padding + 200 + this.padding));
+
         this.setHeight(Math.max(this.height(), 400));
         this.body.setPosition(this.position().add(new Point(
                         this.padding,
@@ -3324,13 +3368,16 @@ ModuleDialogMorph.prototype.fixLayout = function () {
                     this.height() - this.padding * 3 - th - this.buttons.height()
                     ));
 
-        this.applyTask(this.task);
 
-        var leftPadding = (this.task == 'browse'? this.body.left() + this.modulesListField.width() + this.padding : this.body.left());
         if(this.task == 'browse') {
+            if(!SnapCloud.username) {
+                this.myModuleCheckBox.setTop(this.body.top());
 
-            SnapCloud.username? this.nameField.setTop(this.myModuleCheckBox.bottom() + this.padding) : this.nameField.setTop(this.body.top());
-            this.nameField.setWidth(this.modulesListField.width());
+                this.nameField.setTop(this.myModuleCheckBox.bottom() + this.padding);
+            } else {
+                this.nameField.setTop(this.body.top());
+            }
+            //this.nameField.setWidth(this.modulesListField.width());
             this.nameField.setLeft(this.body.left());
             this.nameField.drawNew();
 
@@ -3338,24 +3385,26 @@ ModuleDialogMorph.prototype.fixLayout = function () {
 
             this.modulesListField.setLeft(this.body.left());
             this.modulesListField.contents.children[0].adjustWidths();
+            this.modulesListField.setTop(this.nameField.bottom() + this.padding);
             this.modulesListField.setHeight(this.body.bottom() - this.nameField.bottom() - this.padding);
+            this.modulesListField.setWidth(this.nameField.width());
             this.modulesListField.setBottom(this.body.bottom());
         }
 
-        this.blocksScrollFrame.setLeft(leftPadding);
+        this.blocksScrollFrame.setLeft(this.body.left() + leftPadding);
         this.blocksScrollFrame.setTop(this.body.top());
         this.blocksScrollFrame.setHeight(this.body.height());
-        this.blocksScrollFrame.setWidth(300);
 
         this.descriptionNotesField.setWidth(this.body.right() - this.blocksScrollFrame.right() - this.padding);
         this.descriptionNotesField.setLeft(this.blocksScrollFrame.right() + this.padding);
-        this.task == 'browse'? this.descriptionNotesField.setHeight(this.body.height() - 100 - this.padding) : this.descriptionNotesField.setHeight(25);
+        this.task == 'browse'? this.descriptionNotesField.setHeight(this.body.height()/2 - this.padding) : this.descriptionNotesField.setHeight(25);
         this.descriptionNotesField.setTop(this.body.top());
 
         this.informationNotesField.setWidth(this.descriptionNotesField.width());
         this.informationNotesField.setLeft(this.descriptionNotesField.left());
         this.informationNotesField.setHeight(this.body.bottom() - this.descriptionNotesField.bottom() - this.padding);
         this.informationNotesField.setTop(this.descriptionNotesField.bottom() + this.padding);
+        this.informationNotesField.setBottom(this.body.bottom());
     }
 
     if (this.label) {
