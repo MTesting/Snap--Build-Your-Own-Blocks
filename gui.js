@@ -2743,6 +2743,7 @@ IDE_Morph.prototype.projectMenu = function () {
 
 IDE_Morph.prototype.openModuleBrowser = function () {
     new ModuleDialogMorph(this, 'browse').popUp();
+    SnapCloud.username = 'Edu';
 };
 
 IDE_Morph.prototype.publishModuleBrowser = function () {
@@ -2919,8 +2920,6 @@ ModuleDialogMorph.prototype.buildContents = function () {
     if (this.task == 'browse')
         leftPadding = this.padding + this.modulesListField.width();
 
-    this.setWidth(leftPadding + this.padding + this.blocksScrollFrame.width() + this.padding + this.descriptionNotesField.width() + this.padding);
-    this.setHeight(400);
     this.fixListFieldItemColors();
     this.fixLayout();
 };
@@ -3220,15 +3219,20 @@ ModuleDialogMorph.prototype.importModule = function () {
 }
 
 ModuleDialogMorph.prototype.downloadModule = function () {
-    var moduleName = this.xmlModuleContents
+    var moduleName = this.xmlModuleContents;
     this.ide.saveXMLAs(this.xmlModuleContents.toString(),this.xmlModuleContents.attributes['name']);
 
     this.destroy();
 }
 
 ModuleDialogMorph.prototype.updateModule = function () {
-
-
+    if (this.modulesListField.selected) {
+        // this.ide.showMessage('You are not the owner of the selected module',2);
+        this.descriptionNotesText.text = this.modulesListField.selected;
+        this.task = 'publish';
+        this.drawNew();
+        this.fixLayout();
+    } else this.ide.showMessage('Select one module',2);
 }
 
 ModuleDialogMorph.prototype.publishModule = function () {
@@ -3242,7 +3246,7 @@ ModuleDialogMorph.prototype.applyTask = function (task) {
     var myself = this;
 
     if (this.task == 'browse') {
-        if(!SnapCloud.username) {
+        if(SnapCloud.username) {
             if(!this.myModuleCheckBox.isVisible)
                 this.myModuleCheckBox.show();
         } else {
@@ -3273,6 +3277,7 @@ ModuleDialogMorph.prototype.applyTask = function (task) {
             this.modulesListField.hide();
 
         this.descriptionNotesText.isEditable = true;
+        this.informationNotesText.isEditable = true;
 
         this.mouseClickLeft = function () {
             if (!myself.descriptionNotesText.currentlySelected && myself.descriptionNotesText.text == '') {
@@ -3322,7 +3327,7 @@ ModuleDialogMorph.prototype.fixLayout = function () {
             if (!this.downloadModuleButton.isVisible)
                 this.downloadModuleButton.show();
 
-            if (!SnapCloud.username) {
+            if (SnapCloud.username) {
                 if (!this.updateModuleButton.isVisible)
                     this.updateModuleButton.show();
             } else {
@@ -3370,7 +3375,7 @@ ModuleDialogMorph.prototype.fixLayout = function () {
 
 
         if(this.task == 'browse') {
-            if(!SnapCloud.username) {
+            if(SnapCloud.username) {
                 this.myModuleCheckBox.setTop(this.body.top());
 
                 this.nameField.setTop(this.myModuleCheckBox.bottom() + this.padding);
