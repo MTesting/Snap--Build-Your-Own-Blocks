@@ -75,7 +75,8 @@ modules.gui = '2016-February-24';
 
 var IDE_Morph;
 var ProjectDialogMorph;
-var ModuleDialogMorph;
+var ModuleImportDialogMorph;
+var ModuleExportDialogMorph;
 var SpriteIconMorph;
 var CostumeIconMorph;
 var TurtleIconMorph;
@@ -2742,29 +2743,29 @@ IDE_Morph.prototype.projectMenu = function () {
 };
 
 IDE_Morph.prototype.openModuleBrowser = function () {
-    new ModuleDialogMorph(this, 'browse').popUp();
+    new ModuleImportDialogMorph(this, 'browse').popUp();
     SnapCloud.username = 'Edu';
 };
 
 IDE_Morph.prototype.publishModuleBrowser = function () {
-    new ModuleDialogMorph(this, 'publish').popUp();
+    new ModuleImportDialogMorph(this, 'publish').popUp();
 };
 
-// ModuleDialogMorph ////////////////////////////////////////////////////
+// ModuleImportDialogMorph ////////////////////////////////////////////////////
 
-// ModuleDialogMorph inherits from DialogBoxMorph:
+// ModuleImportDialogMorph inherits from DialogBoxMorph:
 
-ModuleDialogMorph.prototype = new DialogBoxMorph();
-ModuleDialogMorph.prototype.constructor = ModuleDialogMorph;
-ModuleDialogMorph.uber = DialogBoxMorph.prototype;
+ModuleImportDialogMorph.prototype = new DialogBoxMorph();
+ModuleImportDialogMorph.prototype.constructor = ModuleImportDialogMorph;
+ModuleImportDialogMorph.uber = DialogBoxMorph.prototype;
 
-// ModuleDialogMorph instance creation:
+// ModuleImportDialogMorph instance creation:
 
-function ModuleDialogMorph(ide,label) {
+function ModuleImportDialogMorph(ide,label) {
     this.init(ide,label);
 }
 
-ModuleDialogMorph.prototype.init = function (ide,task) {
+ModuleImportDialogMorph.prototype.init = function (ide,task) {
     var myself = this;
 
     // additional properties:
@@ -2773,6 +2774,7 @@ ModuleDialogMorph.prototype.init = function (ide,task) {
     this.moduleList =[];
     this.xmlModuleContents;
     this.blocks=[];
+    this.selectedBlocks=[];
 
     this.handle = null;
     this.nameField = null; /* input text */
@@ -2791,7 +2793,7 @@ ModuleDialogMorph.prototype.init = function (ide,task) {
     this.blocksScrollFrame = null;
 
     // initialize inherited properties:
-    ModuleDialogMorph.uber.init.call(
+    ModuleImportDialogMorph.uber.init.call(
             this,
             this, // target
             null, // function
@@ -2807,7 +2809,7 @@ ModuleDialogMorph.prototype.init = function (ide,task) {
     this.buildContents();
 };
 
-ModuleDialogMorph.prototype.buildContents = function () {
+ModuleImportDialogMorph.prototype.buildContents = function () {
     var thumbnail,
     notification, 
     myself = this;
@@ -2825,7 +2827,7 @@ ModuleDialogMorph.prototype.buildContents = function () {
             function () {
                 return this.state == undefined ? false : this.state;
             }
-            );
+        );
 
     this.body.add(this.myModuleCheckBox);
 
@@ -2924,11 +2926,11 @@ ModuleDialogMorph.prototype.buildContents = function () {
     this.fixLayout();
 };
 
-ModuleDialogMorph.prototype.buildCanvas = function() {
+ModuleImportDialogMorph.prototype.buildCanvas = function() {
     if(!this.blocks)
         this.blocks = [];
 
-    var x, y, checkBox,lastCat,
+    var x, y,lastCat,
         myself = this,
         padding = 4;
 
@@ -2977,17 +2979,25 @@ ModuleDialogMorph.prototype.buildCanvas = function() {
                     myself.blocksScrollFrame.addContents(block);
                     y += block.fullBounds().height() + padding;
                 } else {
-                    checkBox = new ToggleMorph(
+                    var checkBox = new ToggleMorph(
                         'checkbox',
                         myself,
                         function () {
                             console.log("checkbox pressed");
-                            this.state = !this.state;
-                            myself.ide.stage.globalBlocks.push(definition);
+                            var idx = myself.selectedBlocks.indexOf(definition);
+                            if (idx > -1) {
+                                myself.selectedBlocks.splice(idx, 1);
+                            } else {
+                                myself.selectedBlocks.push(definition);
+                            }
                         },
                         null,
                         function () {
-                            return this.state;
+                            return contains(
+                                myself.selectedBlocks,
+                                definition
+                            );
+                            //return (myself.selectedBlocks.indexOf(definition) != -1);
                         },
                         null,
                         null,
@@ -3011,10 +3021,10 @@ ModuleDialogMorph.prototype.buildCanvas = function() {
     this.body.add(this.blocksScrollFrame);
 }
 
-ModuleDialogMorph.prototype.popUp = function (wrrld) {
+ModuleImportDialogMorph.prototype.popUp = function (wrrld) {
     var world = wrrld || this.ide.world();
     if (world) {
-        ModuleDialogMorph.uber.popUp.call(this, world);
+        ModuleImportDialogMorph.uber.popUp.call(this, world);
         this.handle = new HandleMorph(
                 this,
                 350,
@@ -3025,9 +3035,9 @@ ModuleDialogMorph.prototype.popUp = function (wrrld) {
     }
 };
 
-// ModuleDialogMorph list field control
+// ModuleImportDialogMorph list field control
 
-ModuleDialogMorph.prototype.fixListFieldItemColors = function () {
+ModuleImportDialogMorph.prototype.fixListFieldItemColors = function () {
     // remember to always fixLayout() afterwards for the changes
     // to take effect
     var myself = this;
@@ -3039,7 +3049,7 @@ ModuleDialogMorph.prototype.fixListFieldItemColors = function () {
     });
 };
 
-ModuleDialogMorph.prototype.requestModules = function () {
+ModuleImportDialogMorph.prototype.requestModules = function () {
     console.log("modules requested!");
 
     var myself = this;
@@ -3059,7 +3069,7 @@ ModuleDialogMorph.prototype.requestModules = function () {
             );
 }
 
-ModuleDialogMorph.prototype.requestModuleContents = function (module){
+ModuleImportDialogMorph.prototype.requestModuleContents = function (module){
     console.log("module contents requested!");
 
     var myself = this;
@@ -3101,7 +3111,7 @@ ModuleDialogMorph.prototype.requestModuleContents = function (module){
     );
 }
 
-ModuleDialogMorph.prototype.addModules = function (modules) {
+ModuleImportDialogMorph.prototype.addModules = function (modules) {
 
     if(this.modulesListField)
         this.modulesListField.destroy();
@@ -3172,7 +3182,7 @@ ModuleDialogMorph.prototype.addModules = function (modules) {
     this.body.add(this.modulesListField);
 }
 
-ModuleDialogMorph.prototype.rawImportModule = function () { //////////////OPTIMIZAR EL DE MAS ABAJO????????///
+ModuleImportDialogMorph.prototype.rawImportModule = function () { //////////////OPTIMIZAR EL DE MAS ABAJO????????///
     var myself = this;
     this.blocks.forEach(function(definition){
         myself.ide.stage.globalBlocks.push(definition);
@@ -3189,7 +3199,7 @@ ModuleDialogMorph.prototype.rawImportModule = function () { //////////////OPTIMI
 }
 
 
-ModuleDialogMorph.prototype.importModule = function () {
+ModuleImportDialogMorph.prototype.importModule = function () {
     var myself = this;
 //-------------------------------------------------FIND?¿??¿?¿?----------------------------????????????????????
     var blocks = this.blocks.filter(function (definition) {
@@ -3218,14 +3228,14 @@ ModuleDialogMorph.prototype.importModule = function () {
     }
 }
 
-ModuleDialogMorph.prototype.downloadModule = function () {
+ModuleImportDialogMorph.prototype.downloadModule = function () {
     var moduleName = this.xmlModuleContents;
-    this.ide.saveXMLAs(this.xmlModuleContents.toString(),this.xmlModuleContents.attributes['name']);
+    this.ide.saveXMLAs(this.xmlModuleContents.require('blocks').toString(),this.xmlModuleContents.attributes['name']);
 
     this.destroy();
 }
 
-ModuleDialogMorph.prototype.updateModule = function () {
+ModuleImportDialogMorph.prototype.updateModule = function () {
     if (this.modulesListField.selected) {
         // this.ide.showMessage('You are not the owner of the selected module',2);
         this.descriptionNotesText.text = this.modulesListField.selected;
@@ -3235,12 +3245,12 @@ ModuleDialogMorph.prototype.updateModule = function () {
     } else this.ide.showMessage('Select one module',2);
 }
 
-ModuleDialogMorph.prototype.publishModule = function () {
+ModuleImportDialogMorph.prototype.publishModule = function () {
 
 
 }
 
-ModuleDialogMorph.prototype.applyTask = function (task) {
+ModuleImportDialogMorph.prototype.applyTask = function (task) {
     this.task = task || this.task;
 
     var myself = this;
@@ -3310,9 +3320,9 @@ ModuleDialogMorph.prototype.applyTask = function (task) {
     }
 }
 
-// ModuleDialogMorph layout
+// ModuleImportDialogMorph layout
 
-ModuleDialogMorph.prototype.fixLayout = function () {
+ModuleImportDialogMorph.prototype.fixLayout = function () {
     var th = fontHeight(this.titleFontSize) + this.titlePadding * 2,
     thin = this.padding / 2,
     oldFlag = Morph.prototype.trackChanges;
