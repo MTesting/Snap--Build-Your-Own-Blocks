@@ -2743,12 +2743,12 @@ IDE_Morph.prototype.projectMenu = function () {
 };
 
 IDE_Morph.prototype.openModuleBrowser = function () {
-    new ModuleImportDialogMorph(this, 'browse').popUp();
+    new ModuleImportDialogMorph(this).popUp();
     SnapCloud.username = 'Edu';
 };
 
 IDE_Morph.prototype.publishModuleBrowser = function () {
-    new ModuleImportDialogMorph(this, 'publish').popUp();
+    new ModuleExportDialogMorph(this, 'publish').popUp();
 };
 
 // ModuleImportDialogMorph ////////////////////////////////////////////////////
@@ -2761,20 +2761,18 @@ ModuleImportDialogMorph.uber = DialogBoxMorph.prototype;
 
 // ModuleImportDialogMorph instance creation:
 
-function ModuleImportDialogMorph(ide,label) {
-    this.init(ide,label);
+function ModuleImportDialogMorph(ide) {
+    this.init(ide);
 }
 
-ModuleImportDialogMorph.prototype.init = function (ide,task) {
+ModuleImportDialogMorph.prototype.init = function (ide) {
     var myself = this;
 
     // additional properties:
     this.ide = ide;
-    this.task = task || 'browse'; // String describing what do do (browse, publish, update)
     this.moduleList =[];
     this.xmlModuleContents;
     this.blocks=[];
-    this.selectedBlocks=[];
 
     this.handle = null;
     this.nameField = null; /* input text */
@@ -2785,10 +2783,7 @@ ModuleImportDialogMorph.prototype.init = function (ide,task) {
     this.descriptionNotesField = null;
     this.informationNotesField = null;
 
-    this.importModuleButton = null;
-    this.downloadModuleButton = null;
     this.updateModuleButton = null;
-    this.publishModuleButton = null;
 
     this.blocksScrollFrame = null;
 
@@ -2801,9 +2796,9 @@ ModuleImportDialogMorph.prototype.init = function (ide,task) {
             );
 
     // override inherited properites:
-    this.labelString = this.task === 'browse' ? 'Browse Modules' : 'Publish Module';
+    this.labelString = 'Browse Modules';
     this.createLabel();
-    this.task == 'browse' ? this.key = 'browsemodules' : this.key = 'publishmodule';
+    this.key = 'browsemodules';
 
     // build contents
     this.buildContents();
@@ -2865,7 +2860,7 @@ ModuleImportDialogMorph.prototype.buildContents = function () {
     this.descriptionNotesField.contents.acceptsDrops = false;
 
     this.descriptionNotesText = new TextMorph();
-    this.descriptionNotesText.text = this.task == 'browse'? 'Description...' : 'Module name...';
+    this.descriptionNotesText.text = 'Description...';
     this.descriptionNotesText.isEditable = false;
     this.descriptionNotesText.enableSelecting();
 
@@ -2900,27 +2895,19 @@ ModuleImportDialogMorph.prototype.buildContents = function () {
 
     this.body.add(this.informationNotesField);
 
-    this.importModuleButton = this.addButton('importModule', 'Import');
-    this.action = 'importModule';
-
-    this.downloadModuleButton = this.addButton('downloadModule', 'Download');
-    this.action = 'downloadModule';
-
+    this.addButton('importModule', 'Import');
+    this.addButton('downloadModule', 'Download');
     this.updateModuleButton = this.addButton('updateModule', 'Update');
     this.action = 'updateModule';
 
-    this.publishModuleButton = this.addButton('publishModule', 'Publish');
-    this.action = 'publishModule';
+    if (this.task == 'update' && !SnapCloud.username)
+        this.updateModuleButton.hide();
 
     this.addButton('cancel', 'Cancel');
 
-    if (this.task == 'browse') this.requestModules();
-    else this.blocks = this.ide.stage.globalBlocks;
+    this.requestModules();
 
     this.buildCanvas();
-    var leftPadding = 0;
-    if (this.task == 'browse')
-        leftPadding = this.padding + this.modulesListField.width();
 
     this.fixListFieldItemColors();
     this.fixLayout();
@@ -2964,59 +2951,37 @@ ModuleImportDialogMorph.prototype.buildCanvas = function() {
         myself.blocks.forEach(function (definition) {
             if (definition.category === category) {
                 var block = definition.blockInstance();
-                if(myself.task == 'browse') {
-                    block.setPosition(new Point(
-                    x + 5, y + 5));
+                //block.isDraggable = false; //////////////////////¿?¿?¿?¿?¿?¿??¿?¿?¿?¿?
+                block.setPosition(new Point(
+                x + 5, y + 5));
 
-                    /////////////////////////////////////////////////block info///////////
-                     new SpeechBubbleMorph(
-                            localize('block infor'),
-                            null,
-                            null,
-                            1
-                        ).popUp(myself.ide.world(), new Point (x + myself.body.left(), y + myself.body.top()));
-                    ////////////////////////////////////////////////////////block info////
-                    myself.blocksScrollFrame.addContents(block);
-                    y += block.fullBounds().height() + padding;
-                } else {
-                    var checkBox = new ToggleMorph(
-                        'checkbox',
-                        myself,
-                        function () {
-                            console.log("checkbox pressed");
-                            var idx = myself.selectedBlocks.indexOf(definition);
-                            if (idx > -1) {
-                                myself.selectedBlocks.splice(idx, 1);
-                            } else {
-                                myself.selectedBlocks.push(definition);
-                            }
-                        },
-                        null,
-                        function () {
-                            return contains(
-                                myself.selectedBlocks,
-                                definition
-                            );
-                            //return (myself.selectedBlocks.indexOf(definition) != -1);
-                        },
+                /////////////////////////////////////////////////block info///////////
+                 new SpeechBubbleMorph(
+                        localize('block infor'),
                         null,
                         null,
-                        null,
-                        block.fullImage()
-                    );
-                    checkBox.setPosition(new Point(
-                        x,
-                        y + (checkBox.top() - checkBox.toggleElement.top())
-                    ));
-                    myself.blocksScrollFrame.addContents(checkBox);
-                    y += checkBox.fullBounds().height() + padding;
-                }
+                        1
+                    ).popUp(myself.ide.world(), new Point (x + myself.body.left(), y + myself.body.top()));
+                ////////////////////////////////////////////////////////block info////
+                myself.blocksScrollFrame.addContents(block);
+                y += block.fullBounds().height() + padding;
             }
         });
     });
 
     this.blocksScrollFrame.scrollX(padding);
     this.blocksScrollFrame.scrollY(padding);
+
+    this.blocksScrollFrame.changed = function () {
+        myself.blocksScrollFrame.children.forEach(function(child) {
+            if (child instanceof FrameMorph) {
+                if (child.children.length != myself.blocks.length) {
+                    myself.buildCanvas();
+                    myself.fixLayout();
+                }
+            }
+        });
+    };
 
     this.body.add(this.blocksScrollFrame);
 }
@@ -3099,7 +3064,7 @@ ModuleImportDialogMorph.prototype.requestModuleContents = function (module){
             myself.informationNotesText.enableSelecting();
 
             myself.informationNotesField.setContents(myself.informationNotesText);
-            var blocks = myself.ide.serializer.loadBlocks(myself.xmlModuleContents.require('blocks').toString());
+            var blocks = myself.ide.serializer.loadBlocks(myself.xmlModuleContents.require('blocks').toString(), myself.ide.stage);
             myself.blocks = blocks;
 
             myself.buildCanvas();
@@ -3152,7 +3117,6 @@ ModuleImportDialogMorph.prototype.addModules = function (modules) {
             myself.fixLayout();
 
             return;
-
         }
 
         myself.requestModuleContents(item);
@@ -3205,6 +3169,7 @@ ModuleImportDialogMorph.prototype.importModule = function () {
     var blocks = this.blocks.filter(function (definition) {
                 return (myself.ide.stage.globalBlocks.filter(function(globalDefinition){
                     return (globalDefinition.blockSpec() == definition.blockSpec());
+                    //return (globalDefinition.toString() == definition.toString());
                 }).length != 0); ///////////////////////////CONTAINS¿??¿?¿?¿?/////////////¿¿¿¿¿¿¿¿
       });
 //-----------------------------------------------------------------------------?????????????????????
@@ -3229,95 +3194,23 @@ ModuleImportDialogMorph.prototype.importModule = function () {
 }
 
 ModuleImportDialogMorph.prototype.downloadModule = function () {
-    var moduleName = this.xmlModuleContents;
-    this.ide.saveXMLAs(this.xmlModuleContents.require('blocks').toString(),this.xmlModuleContents.attributes['name']);
-
-    this.destroy();
+    if (!this.xmlModuleContents) this.ide.showMessage('No module selected',2);
+    else {
+        this.ide.saveXMLAs(this.xmlModuleContents.require('blocks').toString(), this.xmlModuleContents.attributes['name']);
+        this.destroy();
+    }
 }
 
 ModuleImportDialogMorph.prototype.updateModule = function () {
     if (this.modulesListField.selected) {
         // this.ide.showMessage('You are not the owner of the selected module',2);
-        this.descriptionNotesText.text = this.modulesListField.selected;
-        this.task = 'publish';
-        this.drawNew();
-        this.fixLayout();
+        new ModuleExportDialogMorph(
+            this.ide,
+            'update',
+            this.modulesListField.selected
+                    ).popUp();
+        this.destroy();
     } else this.ide.showMessage('Select one module',2);
-}
-
-ModuleImportDialogMorph.prototype.publishModule = function () {
-
-
-}
-
-ModuleImportDialogMorph.prototype.applyTask = function (task) {
-    this.task = task || this.task;
-
-    var myself = this;
-
-    if (this.task == 'browse') {
-        if(SnapCloud.username) {
-            if(!this.myModuleCheckBox.isVisible)
-                this.myModuleCheckBox.show();
-        } else {
-            if(this.myModuleCheckBox.isVisible)
-                this.myModuleCheckBox.hide();
-        }
-
-        if(!this.nameField.isVisible)
-            this.nameField.show();
-
-        if (!this.modulesListField.isVisible)
-            this.modulesListField.show();
-
-        this.descriptionNotesText.isEditable = false;
-        this.informationNotesText.isEditable = false;
-
-        myself.mouseClickLeft = nop;
-        myself.descriptionNotesText.mouseClickLeft = nop;
-        myself.informationNotesText.mouseClickLeft = nop;
-    } else {
-        if (this.myModuleCheckBox.isVisible)
-            this.myModuleCheckBox.hide();
-
-        if (this.nameField.isVisible)
-            this.nameField.hide();
-
-        if (this.modulesListField.isVisible)
-            this.modulesListField.hide();
-
-        this.descriptionNotesText.isEditable = true;
-        this.informationNotesText.isEditable = true;
-
-        this.mouseClickLeft = function () {
-            if (!myself.descriptionNotesText.currentlySelected && myself.descriptionNotesText.text == '') {
-                myself.descriptionNotesText.text = 'Module name...';
-                myself.fixLayout();
-            }
-
-            if (!myself.informationNotesText.currentlySelected && myself.informationNotesText.text == '') {
-                myself.informationNotesText.text = 'Information...';
-                myself.fixLayout();
-            }
-        };
-
-        this.descriptionNotesText.mouseClickLeft = function () {
-            myself.mouseClickLeft();
-            if (myself.descriptionNotesText.text == 'Module name...') {
-                myself.descriptionNotesText.text = '';
-                myself.fixLayout();
-            }
-        }
-
-        this.informationNotesText.isEditable = true;
-        this.informationNotesText.mouseClickLeft = function () {
-            myself.mouseClickLeft();
-            if (myself.informationNotesText.text == 'Information...') {
-                myself.informationNotesText.text = '';
-                myself.fixLayout();
-            }
-        }
-    }
 }
 
 // ModuleImportDialogMorph layout
@@ -3330,48 +3223,11 @@ ModuleImportDialogMorph.prototype.fixLayout = function () {
     Morph.prototype.trackChanges = false;
 
     if (this.buttons && (this.buttons.children.length > 0)) {
-        if(this.task == 'browse') {
-            if (!this.importModuleButton.isVisible)
-                this.importModuleButton.show();
-
-            if (!this.downloadModuleButton.isVisible)
-                this.downloadModuleButton.show();
-
-            if (SnapCloud.username) {
-                if (!this.updateModuleButton.isVisible)
-                    this.updateModuleButton.show();
-            } else {
-                if (this.updateModuleButton.isVisible)
-                    this.updateModuleButton.hide();
-            }
-
-            if (this.publishModuleButton.isVisible)
-                this.publishModuleButton.hide();
-        } else {
-            if (this.importModuleButton.isVisible)
-                this.importModuleButton.hide();
-
-            if (this.downloadModuleButton.isVisible)
-                this.downloadModuleButton.hide();
-
-            if (this.updateModuleButton.isVisible)
-                this.updateModuleButton.hide();
-
-            if (!this.publishModuleButton.isVisible)
-                this.publishModuleButton.show();
-        }
-
         this.buttons.fixLayout();
     }
 
     if (this.body) {
-        this.applyTask(this.task);
-
-        var leftPadding = 0;
-        if (this.task == 'browse')
-            leftPadding = this.modulesListField.width() + this.padding;
-
-        this.setWidth(Math.max(this.width(), leftPadding + this.padding + this.blocksScrollFrame.width() + this.padding + 200 + this.padding));
+        this.setWidth(Math.max(this.width(), this.padding + this.modulesListField.width() + this.padding + this.blocksScrollFrame.width() + this.padding + 200 + this.padding));
 
         this.setHeight(Math.max(this.height(), 400));
         this.body.setPosition(this.position().add(new Point(
@@ -3383,36 +3239,33 @@ ModuleImportDialogMorph.prototype.fixLayout = function () {
                     this.height() - this.padding * 3 - th - this.buttons.height()
                     ));
 
+        if(SnapCloud.username) {
+            this.myModuleCheckBox.setTop(this.body.top());
 
-        if(this.task == 'browse') {
-            if(SnapCloud.username) {
-                this.myModuleCheckBox.setTop(this.body.top());
-
-                this.nameField.setTop(this.myModuleCheckBox.bottom() + this.padding);
-            } else {
-                this.nameField.setTop(this.body.top());
-            }
-            //this.nameField.setWidth(this.modulesListField.width());
-            this.nameField.setLeft(this.body.left());
-            this.nameField.drawNew();
-
-            // this.paddig = 14
-
-            this.modulesListField.setLeft(this.body.left());
-            this.modulesListField.contents.children[0].adjustWidths();
-            this.modulesListField.setTop(this.nameField.bottom() + this.padding);
-            this.modulesListField.setHeight(this.body.bottom() - this.nameField.bottom() - this.padding);
-            this.modulesListField.setWidth(this.nameField.width());
-            this.modulesListField.setBottom(this.body.bottom());
+            this.nameField.setTop(this.myModuleCheckBox.bottom() + this.padding);
+        } else {
+            this.nameField.setTop(this.body.top());
         }
+        //this.nameField.setWidth(this.modulesListField.width());
+        this.nameField.setLeft(this.body.left());
+        this.nameField.drawNew();
 
-        this.blocksScrollFrame.setLeft(this.body.left() + leftPadding);
+        // this.paddig = 14
+
+        this.modulesListField.setLeft(this.body.left());
+        this.modulesListField.contents.children[0].adjustWidths();
+        this.modulesListField.setTop(this.nameField.bottom() + this.padding);
+        this.modulesListField.setHeight(this.body.bottom() - this.nameField.bottom() - this.padding);
+        this.modulesListField.setWidth(this.nameField.width());
+        this.modulesListField.setBottom(this.body.bottom());
+
+        this.blocksScrollFrame.setLeft(this.body.left() + this.padding + this.modulesListField.width());
         this.blocksScrollFrame.setTop(this.body.top());
         this.blocksScrollFrame.setHeight(this.body.height());
 
         this.descriptionNotesField.setWidth(this.body.right() - this.blocksScrollFrame.right() - this.padding);
         this.descriptionNotesField.setLeft(this.blocksScrollFrame.right() + this.padding);
-        this.task == 'browse'? this.descriptionNotesField.setHeight(this.body.height()/2 - this.padding) : this.descriptionNotesField.setHeight(25);
+        this.descriptionNotesField.setHeight(this.body.height()/2 - this.padding);
         this.descriptionNotesField.setTop(this.body.top());
 
         this.informationNotesField.setWidth(this.descriptionNotesField.width());
@@ -3420,6 +3273,341 @@ ModuleImportDialogMorph.prototype.fixLayout = function () {
         this.informationNotesField.setHeight(this.body.bottom() - this.descriptionNotesField.bottom() - this.padding);
         this.informationNotesField.setTop(this.descriptionNotesField.bottom() + this.padding);
         this.informationNotesField.setBottom(this.body.bottom());
+    }
+
+    if (this.label) {
+        this.label.setCenter(this.center());
+        this.label.setTop(this.top() + (th - this.label.height()) / 2);
+    }
+
+    if (this.buttons && (this.buttons.children.length > 0)) {
+        this.buttons.setCenter(this.center());
+        this.buttons.setBottom(this.bottom() - this.padding);
+    }
+
+    Morph.prototype.trackChanges = oldFlag;
+    this.changed();
+};
+
+// ModuleExportDialogMorph ////////////////////////////////////////////////////
+
+// ModuleExportDialogMorph inherits from DialogBoxMorph:
+
+ModuleExportDialogMorph.prototype = new DialogBoxMorph();
+ModuleExportDialogMorph.prototype.constructor = ModuleExportDialogMorph;
+ModuleExportDialogMorph.uber = DialogBoxMorph.prototype;
+
+// ModuleExportDialogMorph instance creation:
+
+function ModuleExportDialogMorph(ide,label,moduleName) {
+    this.init(ide,label,moduleName);
+}
+
+ModuleExportDialogMorph.prototype.init = function (ide,task,moduleName) {
+    var myself = this;
+
+    // additional properties:
+    this.ide = ide;
+    this.task = task || 'publish'; // String describing what do do (publish, update)
+    this.moduleName = moduleName || '';
+    this.blocks = [];
+    this.selectedBlocks = [];
+
+    this.handle = null;
+    this.moduleNameField = null;
+    this.descriptionNotesText = null;
+    this.descriptionNotesField = null;
+
+    this.modifyModuleButton = null;
+
+    this.blocksScrollFrame = null;
+
+    // initialize inherited properties:
+    ModuleExportDialogMorph.uber.init.call(
+            this,
+            this, // target
+            null, // function
+            null // environment
+            );
+
+    // override inherited properites:
+    this.labelString = this.task === 'publish' ? 'Publish Module' : 'Update Module';
+    this.createLabel();
+    this.task == 'publish' ? this.key = 'publishmodule' : this.key = 'updatemodule';
+
+    // build contents
+    this.buildContents();
+};
+
+ModuleExportDialogMorph.prototype.buildContents = function () {
+    var thumbnail,
+    notification,
+    myself = this;
+
+    this.addBody(new Morph());
+    this.body.color = this.color;
+
+    this.moduleNameField = this.task == 'publish'? new InputFieldMorph('Module name') : new InputFieldMorph(this.moduleName);
+    this.moduleNameField.setWidth(150);
+
+    this.body.add(this.moduleNameField);
+
+    this.descriptionNotesField = new ScrollFrameMorph();
+    this.descriptionNotesField.fixLayout = nop;
+
+    this.descriptionNotesField.edge = InputFieldMorph.prototype.edge;
+    this.descriptionNotesField.fontSize = InputFieldMorph.prototype.fontSize;
+    this.descriptionNotesField.typeInPadding = InputFieldMorph.prototype.typeInPadding;
+    this.descriptionNotesField.contrast = InputFieldMorph.prototype.contrast;
+    this.descriptionNotesField.drawNew = InputFieldMorph.prototype.drawNew;
+    this.descriptionNotesField.drawRectBorder = InputFieldMorph.prototype.drawRectBorder;
+
+    this.descriptionNotesField.acceptsDrops = false;
+    this.descriptionNotesField.contents.acceptsDrops = false;
+
+    this.descriptionNotesText = new TextMorph();
+    this.descriptionNotesText.text = 'Description...';
+    this.descriptionNotesText.isEditable = true;
+    this.descriptionNotesText.enableSelecting();
+
+    this.mouseClickLeft = function () {
+        if (!myself.descriptionNotesText.currentlySelected && myself.descriptionNotesText.text == '') {
+            myself.descriptionNotesText.text = 'Description...';
+            myself.fixLayout();
+        }
+    }
+
+    this.descriptionNotesText.mouseClickLeft = function () {
+        if (myself.descriptionNotesText.text == 'Description...') {
+            myself.descriptionNotesText.text = '';
+            myself.fixLayout();
+        }
+    }
+
+    this.descriptionNotesField.isTextLineWrapping = true;
+    this.descriptionNotesField.padding = 3;
+    this.descriptionNotesField.setContents(this.descriptionNotesText);
+    this.descriptionNotesField.setWidth(150);
+
+    this.body.add(this.descriptionNotesField);
+
+    this.task == 'publish'? this.addButton('exportModule', 'Publish') : this.addButton('exportModule', 'Update');
+    this.action = 'exportModule';
+
+    this.addButton('cancel', 'Cancel')
+
+    if (this.task == 'update')
+        this.requestModuleContents(this.moduleName);
+    else {
+        this.selectedBlocks = [];
+        this.blocks = this.ide.stage.globalBlocks;
+    }
+
+    this.buildCanvas();
+
+    this.fixLayout();
+};
+
+ModuleExportDialogMorph.prototype.buildCanvas = function() {
+    if(!this.blocks)
+        this.blocks = [];
+
+    var x, y,lastCat,
+        myself = this,
+        padding = 4;
+
+    if (this.blocksScrollFrame)
+        this.blocksScrollFrame.destroy();
+
+    // create plaette
+    this.blocksScrollFrame = new ScrollFrameMorph(
+        null,
+        null,
+        SpriteMorph.prototype.sliderColor
+    );
+
+    this.blocksScrollFrame.color = SpriteMorph.prototype.paletteColor;
+    this.blocksScrollFrame.padding = padding;
+    this.blocksScrollFrame.isDraggable = false;
+    this.blocksScrollFrame.acceptsDrops = false;
+    this.blocksScrollFrame.contents.acceptsDrops = false;
+    this.blocksScrollFrame.setWidth(300);
+
+
+    // populate palette
+    x = this.blocksScrollFrame.left() + padding;
+    y = this.blocksScrollFrame.top() + padding;
+
+    this.blocksScrollFrame.scrollX(padding);
+    this.blocksScrollFrame.scrollY(padding);
+
+
+    SpriteMorph.prototype.categories.forEach(function (category) {
+        myself.blocks.forEach(function (definition) {
+            if (definition.category === category) {
+                var block = definition.blockInstance();
+                var checkBox = new ToggleMorph(
+                    'checkbox',
+                    myself,
+                    function () {
+                        console.log("checkbox pressed");
+                        var idx = myself.selectedBlocks.indexOf(definition);
+                        if (idx > -1) {
+                            myself.selectedBlocks.splice(idx, 1);
+                        } else {
+                            myself.selectedBlocks.push(definition);
+                        }
+
+                        /////////////////////////////////////////////////block info///////////
+                         new SpeechBubbleMorph(
+                                localize('block infor'),
+                                null,
+                                null,
+                                1
+                            ).popUp(myself.ide.world(), new Point (x + myself.body.left(), y + myself.body.top()));
+                        ////////////////////////////////////////////////////////block info////
+                    },
+                    null,
+                    function () {
+                        return !myself.selectedBlocks.every(function(element) {
+                                return (element.blockSpec() != definition.blockSpec());
+                                });
+                        //return (myself.selectedBlocks.indexOf(definition) != -1);
+                    },
+                    null,
+                    null,
+                    null,
+                    block.fullImage()
+                );
+
+                checkBox.setPosition(new Point(
+                    x,
+                    y + (checkBox.top() - checkBox.toggleElement.top())
+                ));
+                myself.blocksScrollFrame.addContents(checkBox);
+                y += checkBox.fullBounds().height() + padding;
+            }
+        });
+    });
+
+    this.blocksScrollFrame.scrollX(padding);
+    this.blocksScrollFrame.scrollY(padding);
+
+    this.body.add(this.blocksScrollFrame);
+}
+
+ModuleExportDialogMorph.prototype.popUp = function (wrrld) {
+    var world = wrrld || this.ide.world();
+    if (world) {
+        ModuleExportDialogMorph.uber.popUp.call(this, world);
+        this.handle = new HandleMorph(
+                this,
+                350,
+                300,
+                this.corner,
+                this.corner
+                );
+    }
+};
+
+ModuleExportDialogMorph.prototype.requestModuleContents = function (module){
+    console.log("module contents requested!");
+
+    var myself = this;
+    this.blocks = [];
+
+    SnapCloud.getModuleContents(
+        module,
+        function (moduleContents) {
+
+            myself.xmlModuleContents = new XML_Element();
+            myself.xmlModuleContents.parseString(moduleContents);
+
+            if(myself.descriptionNotesField)
+                myself.descriptionNotesField.destroy();
+
+            myself.descriptionNotesField.text = myself.xmlModuleContents.require('description').contents;
+
+            var blocks = myself.ide.serializer.loadBlocks(myself.xmlModuleContents.require('blocks').toString(), myself.ide.stage);;
+            myself.selectedBlocks = myself.ide.serializer.loadBlocks(myself.xmlModuleContents.require('blocks').toString(), myself.ide.stage);
+            myself.blocks = blocks;
+
+            myself.ide.stage.globalBlocks.forEach(function (definition) {
+                if (blocks.every (function(def){
+                    return (definition.blockSpec() != def.blockSpec());
+                })) {
+                    myself.blocks.push(definition);
+                }
+             });
+
+            myself.buildCanvas();
+
+            myself.fixLayout();
+
+        },
+        myself.ide.cloudError()
+    );
+}
+
+ModuleExportDialogMorph.prototype.exportModule = function () {
+    /*var myself = this;
+
+    SnapCloud.exportModule(
+        module,
+        function (moduleContents) {
+            this.ide.confirm(
+            'There are no modules selected, the module will be destroyed\nYou want to continue?,
+            'Export module',
+            function () {
+                this.ide.showMessage('Module imported',2);
+                destroy();
+            }
+         );
+        },
+        myself.ide.cloudeError()
+    );*/
+}
+
+// ModuleExportDialogMorph layout
+
+ModuleExportDialogMorph.prototype.fixLayout = function () {
+    var th = fontHeight(this.titleFontSize) + this.titlePadding * 2,
+    thin = this.padding / 2,
+    oldFlag = Morph.prototype.trackChanges;
+
+    Morph.prototype.trackChanges = false;
+
+    if (this.buttons && (this.buttons.children.length > 0)) {
+        this.buttons.fixLayout();
+    }
+
+    if (this.body) {
+        this.setWidth(Math.max(this.width(), this.padding + this.blocksScrollFrame.width() + this.padding + 200 + this.padding));
+
+        this.setHeight(Math.max(this.height(), 400));
+        this.body.setPosition(this.position().add(new Point(
+                        this.padding,
+                        th + this.padding
+                        )));
+        this.body.setExtent(new Point(
+                    this.width() - this.padding * 2,
+                    this.height() - this.padding * 3 - th - this.buttons.height()
+                    ));
+
+        this.blocksScrollFrame.setLeft(this.body.left());
+        this.blocksScrollFrame.setTop(this.body.top());
+        this.blocksScrollFrame.setHeight(this.body.height());
+
+        this.moduleNameField.setWidth(this.body.right() - this.blocksScrollFrame.right() - this.padding);
+        this.moduleNameField.setLeft(this.blocksScrollFrame.right() + this.padding);
+        this.moduleNameField.setHeight(25);
+        this.moduleNameField.setTop(this.body.top());
+
+        this.descriptionNotesField.setWidth(this.moduleNameField.width());
+        this.descriptionNotesField.setLeft(this.moduleNameField.left());
+        this.descriptionNotesField.setHeight(this.body.bottom() - this.moduleNameField.bottom() - this.padding);
+        this.descriptionNotesField.setTop(this.moduleNameField.bottom() + this.padding);
+        this.descriptionNotesField.setBottom(this.body.bottom());
     }
 
     if (this.label) {
