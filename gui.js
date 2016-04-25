@@ -2951,18 +2951,17 @@ ModuleImportDialogMorph.prototype.buildCanvas = function() {
         myself.blocks.forEach(function (definition) {
             if (definition.category === category) {
                 var block = definition.blockInstance();
-                //block.isDraggable = false; //////////////////////¿?¿?¿?¿?¿?¿??¿?¿?¿?¿?
                 block.setPosition(new Point(
                 x + 5, y + 5));
 
-                /////////////////////////////////////////////////block info///////////
-                 new SpeechBubbleMorph(
-                        localize('block infor'),
-                        null,
-                        null,
-                        1
-                    ).popUp(myself.ide.world(), new Point (x + myself.body.left(), y + myself.body.top()));
-                ////////////////////////////////////////////////////////block info////
+                block.mouseEnter = function () {
+                    block.bubbleHelp("Block Info!");
+                }
+
+                block.mouseLeave = function () {
+                    myself.world().hand.destroyTemporaries();
+                }
+
                 myself.blocksScrollFrame.addContents(block);
                 y += block.fullBounds().height() + padding;
             }
@@ -3347,7 +3346,8 @@ ModuleExportDialogMorph.prototype.buildContents = function () {
     this.addBody(new Morph());
     this.body.color = this.color;
 
-    this.moduleNameField = this.task == 'publish'? new InputFieldMorph('Module name') : new InputFieldMorph(this.moduleName);
+    this.moduleNameField = this.task == 'publish'? new InputFieldMorph('Module name') : new TextMorph(this.moduleName);
+    this.moduleNameField.isEditable = this.task == 'publish'? true : false;
     this.moduleNameField.setWidth(150);
 
     this.body.add(this.moduleNameField);
@@ -3365,14 +3365,15 @@ ModuleExportDialogMorph.prototype.buildContents = function () {
     this.descriptionNotesField.acceptsDrops = false;
     this.descriptionNotesField.contents.acceptsDrops = false;
 
-    this.descriptionNotesText = new TextMorph();
-    this.descriptionNotesText.text = 'Description...';
+    this.descriptionNotesText = new TextMorph('Description...');
     this.descriptionNotesText.isEditable = true;
     this.descriptionNotesText.enableSelecting();
 
     this.mouseClickLeft = function () {
         if (!myself.descriptionNotesText.currentlySelected && myself.descriptionNotesText.text == '') {
-            myself.descriptionNotesText.text = 'Description...';
+            //myself.descriptionNotesText.text = 'Description...';
+            myself.descriptionNotesField.color = SpriteMorph.prototype.paletteColor;
+            alert("color");
             myself.fixLayout();
         }
     }
@@ -3457,15 +3458,6 @@ ModuleExportDialogMorph.prototype.buildCanvas = function() {
                         } else {
                             myself.selectedBlocks.push(definition);
                         }
-
-                        /////////////////////////////////////////////////block info///////////
-                         new SpeechBubbleMorph(
-                                localize('block infor'),
-                                null,
-                                null,
-                                1
-                            ).popUp(myself.ide.world(), new Point (x + myself.body.left(), y + myself.body.top()));
-                        ////////////////////////////////////////////////////////block info////
                     },
                     null,
                     function () {
@@ -3481,9 +3473,18 @@ ModuleExportDialogMorph.prototype.buildCanvas = function() {
                 );
 
                 checkBox.setPosition(new Point(
-                    x,
-                    y + (checkBox.top() - checkBox.toggleElement.top())
+                    x + 5,
+                    y + (checkBox.top() - checkBox.toggleElement.top()) + 5
                 ));
+
+                checkBox.mouseEnter = function () {
+                    checkBox.bubbleHelp("Block Info!");
+                }
+
+                checkBox.mouseLeave = function () {
+                    myself.world().hand.destroyTemporaries();
+                }
+
                 myself.blocksScrollFrame.addContents(checkBox);
                 y += checkBox.fullBounds().height() + padding;
             }
@@ -3523,10 +3524,7 @@ ModuleExportDialogMorph.prototype.requestModuleContents = function (module){
             myself.xmlModuleContents = new XML_Element();
             myself.xmlModuleContents.parseString(moduleContents);
 
-            if(myself.descriptionNotesField)
-                myself.descriptionNotesField.destroy();
-
-            myself.descriptionNotesField.text = myself.xmlModuleContents.require('description').contents;
+            myself.descriptionNotesField.text = "Module description";
 
             var blocks = myself.ide.serializer.loadBlocks(myself.xmlModuleContents.require('blocks').toString(), myself.ide.stage);;
             myself.selectedBlocks = myself.ide.serializer.loadBlocks(myself.xmlModuleContents.require('blocks').toString(), myself.ide.stage);
