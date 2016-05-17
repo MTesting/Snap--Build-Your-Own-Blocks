@@ -245,6 +245,33 @@ Cloud.prototype.getModuleContents = function (module,callBack, errorCall) {
     }
 }
 
+Cloud.prototype.getModuleInformation = function (module,callBack, errorCall) {
+    var request = new XMLHttpRequest(),
+    myself = this;
+    try {
+        request.open(
+            "GET",
+            "https://raw.githubusercontent.com/MTesting/Test/master/" + module + ".txt",
+            true
+        );
+        request.setRequestHeader(
+            "Content-Type",
+            "application/x-www-form-urlencoded"
+        );
+        request.onreadystatechange = function () {
+            if (request.readyState == 4) {
+                callBack.call(
+                    null,
+                    request.responseText
+                );
+            }
+        };
+        request.send(null);
+    } catch (err) {
+        errorCall.call(this, err.toString(), 'Snap!Cloud');
+    }
+}
+
 Cloud.prototype.exportModule = function (moduleName, moduleContents,callBack, errorCall) {
     /*var request = new XMLHttpRequest(),
     myself = this;
