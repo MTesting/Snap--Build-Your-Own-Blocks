@@ -2679,7 +2679,7 @@ IDE_Morph.prototype.projectMenu = function () {
     menu.addLine();
 
     menu.addItem('Browse modules','openModuleBrowser','browse all modules from community developers');
-    //if (SnapCloud.username)
+    if (SnapCloud.username)
         menu.addItem('Publish module','publishModuleBrowser','pubish and share your local module');
 
 // EDUARDO /////////////////////////////////////////////
@@ -2744,7 +2744,6 @@ IDE_Morph.prototype.projectMenu = function () {
 
 IDE_Morph.prototype.openModuleBrowser = function () {
     new ModuleImportDialogMorph(this).popUp();
-    SnapCloud.username = 'Edu';
 };
 
 IDE_Morph.prototype.publishModuleBrowser = function () {
@@ -2925,7 +2924,7 @@ ModuleImportDialogMorph.prototype.buildContents = function () {
     this.updateModuleButton = this.addButton('updateModule', 'Update');
     this.action = 'updateModule';
 
-    if (this.task == 'update' && !SnapCloud.username)
+    if (!this.task == 'update' || !SnapCloud.username)
         this.updateModuleButton.hide();
 
     this.addButton('cancel', 'Cancel');
@@ -2956,6 +2955,7 @@ ModuleImportDialogMorph.prototype.buildCanvas = function() {
         SpriteMorph.prototype.sliderColor
     );
 
+    this.blocksScrollFrame.owner = this.ide.currentSprite;
     this.blocksScrollFrame.color = SpriteMorph.prototype.paletteColor;
     this.blocksScrollFrame.padding = padding;
     this.blocksScrollFrame.isDraggable = false;
@@ -2980,7 +2980,7 @@ ModuleImportDialogMorph.prototype.buildCanvas = function() {
                 x + 5, y + 5));
 
                 block.mouseEnter = function () {
-                    block.bubbleHelp("Block Info!");
+                    block.bubbleHelp(block.definition.comment ? block.definition.comment.text() : "No description");
                 }
 
                 block.mouseLeave = function () {
@@ -3470,16 +3470,23 @@ ModuleExportDialogMorph.prototype.buildContents = function () {
     this.fixLayout();
 };
 
-ModuleExportDialogMorph.prototype.buildCanvas = function() {
-    if(!this.blocks)
-        this.blocks = [];
+// = [{autor:'asdasd', moduleNames: ['asdsafd','dsf']},{autor:'asdasd', blocks: [asdsafd,dsf]},{autor:'asdasd', blocks: [asdsafd,dsf]}]
 
-    var x, y,lastCat,
+
+ModuleExportDialogMorph.prototype.buildCanvas = function() {
+    if (!this.blocks) {
+        this.blocks = [];
+    }
+
+    var x,
+        y,
+        lastCat,
         myself = this,
         padding = 4;
 
-    if (this.blocksScrollFrame)
+    if (this.blocksScrollFrame) {
         this.blocksScrollFrame.destroy();
+    }
 
     // create plaette
     this.blocksScrollFrame = new ScrollFrameMorph(
@@ -3488,6 +3495,7 @@ ModuleExportDialogMorph.prototype.buildCanvas = function() {
         SpriteMorph.prototype.sliderColor
     );
 
+    this.blocksScrollFrame.owner = this.ide.currentSprite;
     this.blocksScrollFrame.color = SpriteMorph.prototype.paletteColor;
     this.blocksScrollFrame.padding = padding;
     this.blocksScrollFrame.isDraggable = false;
