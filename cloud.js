@@ -191,13 +191,17 @@ Cloud.prototype.getPublicProject = function (
 
 // EDUARDO/////////////////////////////////////////////////////////7
 
-Cloud.prototype.getModuleList = function (callBack, errorCall) { //////!!! si es contra la API de Snap! -> callService!!!!
+Cloud.prototype.getModuleList = function (callBack, errorCall, author) { //////!!! si es contra la API de Snap! -> callService!!!!
     var request = new XMLHttpRequest(),
-    myself = this;
+    myself = this,
+    url = "https://api.github.com/repos/MTesting/Test/contents";
+    if (author) {
+        url += "/" + author;
+    }
     try {
         request.open(
             "GET",
-            "https://api.github.com/repos/MTesting/Test/contents",
+            url,//"https://api.github.com/repos/MTesting/Test/contents",
             true
         );
         request.setRequestHeader(
@@ -218,13 +222,13 @@ Cloud.prototype.getModuleList = function (callBack, errorCall) { //////!!! si es
     }
 }
 
-Cloud.prototype.getModuleContents = function (module,callBack, errorCall) {
+Cloud.prototype.getModuleContents = function (author,module,callBack, errorCall) {
     var request = new XMLHttpRequest(),
     myself = this;
     try {
         request.open(
             "GET",
-            "https://raw.githubusercontent.com/MTesting/Test/master/" + module + ".xml",
+            "https://raw.githubusercontent.com/MTesting/Test/master/" + author + "/" + module + ".xml",
             true
         );
         request.setRequestHeader(
@@ -245,18 +249,19 @@ Cloud.prototype.getModuleContents = function (module,callBack, errorCall) {
     }
 }
 
-Cloud.prototype.getModuleInformation = function (module,callBack, errorCall) {
+Cloud.prototype.exportModule = function (moduleContents, callBack, errorCall) {
     var request = new XMLHttpRequest(),
     myself = this;
     try {
         request.open(
-            "GET",
-            "https://raw.githubusercontent.com/MTesting/Test/master/" + module + ".txt",
+            "PUT",
+            //"https://raw.githubusercontent.com/MTesting/Test/master/" + module + ".xml",
+            "https://api.github.com/repos/MTesting/Test/contents/Edu/MATH.xml",
             true
         );
         request.setRequestHeader(
             "Content-Type",
-            "application/x-www-form-urlencoded"
+            "application/json; charset=utf-8"
         );
         request.onreadystatechange = function () {
             if (request.readyState == 4) {
@@ -266,37 +271,17 @@ Cloud.prototype.getModuleInformation = function (module,callBack, errorCall) {
                 );
             }
         };
-        request.send(null);
+        var usr = JSON.stringify({ 'message': 'my commit message',
+                                    'committer': {
+                                        'name': 'edu',
+                                        'email': 'eduedun@gmail.com'
+                                        },
+                                    'content': 'bXkgbmV3IGZpbGUgY29udGVudHM='
+                                    });
+        request.send(usr);
     } catch (err) {
         errorCall.call(this, err.toString(), 'Snap!Cloud');
     }
-}
-
-Cloud.prototype.exportModule = function (moduleName, moduleContents,callBack, errorCall) {
-    /*var request = new XMLHttpRequest(),
-    myself = this;
-    try {
-        request.open(
-            "GET",
-            "https://raw.githubusercontent.com/MTesting/Test/master/" + module + ".xml",
-            true
-        );
-        request.setRequestHeader(
-            "Content-Type",
-            "application/x-www-form-urlencoded"
-        );
-        request.onreadystatechange = function () {
-            if (request.readyState == 4) {
-                callBack.call(
-                    null,
-                    request.responseText
-                );
-            }
-        };
-        request.send(null);
-    } catch (err) {
-        errorCall.call(this, err.toString(), 'Snap!Cloud');
-    }*/
 }
 
 //EDUARDO///////////////////////////////////////////////
