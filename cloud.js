@@ -255,13 +255,16 @@ Cloud.prototype.exportModule = function (moduleContents, callBack, errorCall) {
     try {
         request.open(
             "PUT",
-            //"https://raw.githubusercontent.com/MTesting/Test/master/" + module + ".xml",
-            "https://api.github.com/repos/MTesting/Test/contents/Edu/MATH.xml",
+            "https://api.github.com/repos/MTesting/Test/contents/example2.xml",
             true
         );
         request.setRequestHeader(
             "Content-Type",
             "application/json; charset=utf-8"
+        );
+        request.setRequestHeader(
+            "Authorization",
+            "Basic " + btoa("MTesting:eduardo1")
         );
         request.onreadystatechange = function () {
             if (request.readyState == 4) {
@@ -270,14 +273,8 @@ Cloud.prototype.exportModule = function (moduleContents, callBack, errorCall) {
                     request.responseText
                 );
             }
-        };
-        var usr = JSON.stringify({ 'message': 'my commit message',
-                                    'committer': {
-                                        'name': 'edu',
-                                        'email': 'eduedun@gmail.com'
-                                        },
-                                    'content': 'bXkgbmV3IGZpbGUgY29udGVudHM='
-                                    });
+        }; //8a811fad6c13dff799b96c900d97f2ab73645358 token!!
+        var usr = JSON.stringify({"message":"test", "content":"aG9sYSBkZXNkZSBqYXZhc2NyaXB0IQ==","sha": "6917f146ae71bf9a155860f5740a38cd2a80e524"});
         request.send(usr);
     } catch (err) {
         errorCall.call(this, err.toString(), 'Snap!Cloud');
