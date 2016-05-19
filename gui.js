@@ -3223,7 +3223,7 @@ ModuleImportDialogMorph.prototype.rawImportModule = function () { //////////////
 
     this.ide.flushPaletteCache();
     this.ide.refreshPalette();
-
+this.blocks.forEach(function(b){console.log(b.toString());});
     this.destroy();///////////////////////////////////////////////////ERROR CON GLOBALBLOCKS!!!!!!!!!///////////////////
 }
 
@@ -3636,27 +3636,60 @@ ModuleExportDialogMorph.prototype.rawExportModule = function (blockList) { // bl
     );*/
 }
 
-ModuleExportDialogMorph.prototype.publishModule = function () { //blockList = selected blocks????
+ModuleExportDialogMorph.prototype.publishModule = function () { //blockList = selected blocks???? && aprovechar para obtener el sha, o desde module list despues de hacer el export module!!
     var myself = this;
-    SnapCloud.getModuleList(
-        function(moduleNameListJSON) {
-            var moduleList = JSON.parse(moduleNameListJSON);
-            if (moduleList.map(function(element) { return element.name.substr(0, element.name.length - 4); }).indexOf(myself.moduleNameField.contents().text.text) === -1) {
-                SnapCloud.exportModule(
-                    null,
-                    function (moduleContents) {
+    if (!this.selectedBlocks || this.selectedBlocks.length > 0) {
+        SnapCloud.getModuleList(
+            function(moduleNameListJSON) {
+                var moduleList = JSON.parse(moduleNameListJSON);
+                if (moduleList.map(function(element) { return element.name.substr(0, element.name.length - 4); }).indexOf(myself.moduleNameField.contents().text.text) === -1) {
+                    var str = myself.ide.serializer.serialize(myself.selectedBlocks);
 
+                    // blocks to string
+                    str = '<blocks app="'
+                    + myself.ide.serializer.app
+                    + '" version="'
+                    + myself.ide.serializer.version
+                    + '">'
+                    + str
+                    + '</blocks>';
 
-                    },
-                    myself.ide.cloudError()
-                );
-            } else {
-                myself.ide.showMessage('You already have a ' + myself.moduleNameField.contents().text.text  + ' module defined',2);
-            }
-        },
-        myself.ide.cloudError(),
-        SnapCloud.username
-    );
+                    //module
+                    str = '<module name="'
+                    + myself.moduleNameField.contents().text.text
+                    + '" author="'
+                    + SnapCloud.username
+                    + '" uploaded="1/1/1">'
+                    + '<description>'
+                    + myself.descriptionNotesText.text
+                    + '</description>'
+                    + str
+                    + '</module>';
+
+                    SnapCloud.exportModule(
+                        str,
+                        'publish',
+                        function (code) {
+                            myself.ide.showMessage('Module published',2);
+                            myself.destroy();
+                        },
+                        myself.ide.cloudError()
+                    );
+                } else {
+                    myself.ide.showMessage('You already have a ' + myself.moduleNameField.contents().text.text  + ' module defined',2);
+                }
+            },
+            myself.ide.cloudError(),
+            SnapCloud.username
+        );
+    } else {
+        if (this.blocks.length > 0) {
+            this.ide.showMessage("No custom blocks", 2);
+            this.destroy();
+        } else {
+            this.ide.showMessage ("No blocks selected", 2);
+        }
+    }
 }
 
 ModuleExportDialogMorph.prototype.updateModule = function () { //blockList = selected blocks????
