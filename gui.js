@@ -3642,7 +3642,8 @@ ModuleExportDialogMorph.prototype.publishModule = function () { //blockList = se
         SnapCloud.getModuleList(
             function(moduleNameListJSON) {
                 var moduleList = JSON.parse(moduleNameListJSON);
-                if (moduleList.map(function(element) { return element.name.substr(0, element.name.length - 4); }).indexOf(myself.moduleNameField.contents().text.text) === -1) {
+                console.log(moduleList);
+                if (moduleList.message == 'Not Found' || moduleList.map(function(element) { return element.name.substr(0, element.name.length - 4); }).indexOf(myself.moduleNameField.contents().text.text) === -1) {
                     var str = myself.ide.serializer.serialize(myself.selectedBlocks);
 
                     // blocks to string
@@ -3655,11 +3656,14 @@ ModuleExportDialogMorph.prototype.publishModule = function () { //blockList = se
                     + '</blocks>';
 
                     //module
+                    var date = new Date();
                     str = '<module name="'
                     + myself.moduleNameField.contents().text.text
                     + '" author="'
                     + SnapCloud.username
-                    + '" uploaded="1/1/1">'
+                    + '" uploaded="'
+                    + date.getHours() + ':' + date.getMinutes() + ' - ' + date.getDate() + ' / ' + (date.getMonth() + 1) + ' / ' + date.getFullYear()
+                    + '">'
                     + '<description>'
                     + myself.descriptionNotesText.text
                     + '</description>'
@@ -3668,7 +3672,7 @@ ModuleExportDialogMorph.prototype.publishModule = function () { //blockList = se
 
                     SnapCloud.exportModule(
                         str,
-                        'publish',
+                        myself.task,
                         function (code) {
                             myself.ide.showMessage('Module published',2);
                             myself.destroy();
@@ -3683,7 +3687,7 @@ ModuleExportDialogMorph.prototype.publishModule = function () { //blockList = se
             SnapCloud.username
         );
     } else {
-        if (this.blocks.length > 0) {
+        if (this.blocks.length === 0) {
             this.ide.showMessage("No custom blocks", 2);
             this.destroy();
         } else {

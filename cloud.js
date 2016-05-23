@@ -249,7 +249,7 @@ Cloud.prototype.getModuleContents = function (author,module,callBack, errorCall)
     }
 }
 
-Cloud.prototype.exportModule = function (moduleContents, task, callBack, errorCall) { //module contents en JSON?¿
+Cloud.prototype.exportModule = function (moduleContents, task, callBack, errorCall) {
     var request = new XMLHttpRequest(),
     myself = this,
     sha,
