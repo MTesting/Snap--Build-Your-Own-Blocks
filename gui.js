@@ -3051,27 +3051,30 @@ ModuleImportDialogMorph.prototype.requestModules = function () {
 
     var myself = this;
     this.moduleList = [];
-    SnapCloud.getModuleList(
-        function (authorsListJSON) {
-            var authorsList = JSON.parse(authorsListJSON);
-            authorsList.forEach(function(author) {
-                SnapCloud.getModuleList(
-                    function(moduleNameListJSON) {
-                        var moduleList = JSON.parse(moduleNameListJSON);
-                        var element = { 'author': author.name,
-                                        'modules': [] };
-                        moduleList.forEach(function(module) {
-                            element['modules'].push(module.name.substr(0, module.name.length - 4));
-                        });
-                        myself.moduleList.push(element);
-                        myself.addModules(myself.moduleList);
-                        myself.fixListFieldItemColors();
-                        myself.fixLayout();
-                    },
-                    myself.ide.cloudError(),
-                    author.name
-                );
+    SnapCloud.getModuleTree(
+        function (treeJSON) {
+            console.log(treeJSON);
+            var treeList = JSON.parse(treeJSON),
+            author,
+            elem;
+
+            treeList.tree.forEach(function(element) {
+                if (element.type == "tree") {
+                    if (author)  myself.moduleList.push(elem);
+                    author = element.path;
+                    elem = {'author': author,
+                              'modules': []};
+                } else {
+                    var name = element.path.split('/')[1];
+
+                    elem['modules'].push(name.substr(0, name.length - 4));
+                }
             });
+            myself.moduleList.push(elem);
+
+            myself.addModules(myself.moduleList);
+            myself.fixListFieldItemColors();
+            myself.fixLayout();
         },
         myself.ide.cloudError()
     );
