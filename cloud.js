@@ -191,46 +191,12 @@ Cloud.prototype.getPublicProject = function (
 
 // EDUARDO/////////////////////////////////////////////////////////7
 
-Cloud.prototype.getModuleTree = function (callBack, errorCall) {
+Cloud.prototype.getModuleTree = function (callBack, errorCall, recursion) {
     var request = new XMLHttpRequest(),
     myself = this,
-    url = "https://api.github.com/repos/MTesting2/Test/git/trees/master?recursive=1";
-
-    try {
-        request.open(
-            "GET",
-            url,
-            true
-        );
-        request.setRequestHeader(
-              "Authorization",
-              "Basic " + btoa("MTesting2:efaaf65053f887e4de5f4ac265a6c9062e8b182b")
-          );
-        request.setRequestHeader(
-            "Content-Type",
-            "application/x-www-form-urlencoded"
-        );
-
-        request.onreadystatechange = function () {
-            if (request.readyState == 4) {
-                callBack.call(
-                    null,
-                    request.responseText
-                );
-            }
-        };
-        request.send(null);
-    } catch (err) {
-        errorCall.call(this, err.toString(), 'Snap!Cloud');
-    }
-}
-
-Cloud.prototype.getModuleList = function (callBack, errorCall, author) {
-    var request = new XMLHttpRequest(),
-    myself = this,
-    url = "https://api.github.com/repos/MTesting2/Test/contents";
-    if (author) {
-        url += "/" + author;
+    url = "https://api.github.com/repos/MTesting2/Test/git/trees/master";
+    if (recursion) {
+        url += "?recursive=1";
     }
 
     try {
@@ -241,7 +207,7 @@ Cloud.prototype.getModuleList = function (callBack, errorCall, author) {
         );
         request.setRequestHeader(
               "Authorization",
-              "Basic " + btoa("MTesting2:efaaf65053f887e4de5f4ac265a6c9062e8b182b")
+              "Basic " + btoa("MTesting2:2708f98d21dfd6f9cfedcdf67511641838aec2ab")
           );
         request.setRequestHeader(
             "Content-Type",
@@ -249,7 +215,7 @@ Cloud.prototype.getModuleList = function (callBack, errorCall, author) {
         );
 
         request.onreadystatechange = function () {
-            if (request.readyState == 4) {
+            if (request.readyState === 4) {
                 callBack.call(
                     null,
                     request.responseText
@@ -276,7 +242,7 @@ Cloud.prototype.getModuleContents = function (author,module,callBack, errorCall)
             "application/x-www-form-urlencoded"
         );
         request.onreadystatechange = function () {
-            if (request.readyState == 4) {
+            if (request.readyState === 4) {
                 callBack.call(
                     null,
                     request.responseText
@@ -289,28 +255,14 @@ Cloud.prototype.getModuleContents = function (author,module,callBack, errorCall)
     }
 }
 
-Cloud.prototype.exportModule = function (moduleContents, task, callBack, errorCall) {
+Cloud.prototype.exportModule = function (callBack, errorCall, moduleContents, sha) {
     var request = new XMLHttpRequest(),
     myself = this,
-    sha,
+    task = sha ? 'update' : 'publish',
     XMLModuleContents = new XML_Element();
     XMLModuleContents.parseString(moduleContents);
 
     try {
-        if (task == 'update') {
-            SnapCloud.getModuleList(
-                function(moduleNameListJSON) {
-                    var moduleList = JSON.parse(moduleNameListJSON);
-
-                    var index = moduleList.map(function(element) { return element.name; }).indexOf(XMLModuleContents.attributes['name'] + ".xml");
-                    if (index > -1) {
-                        sha = moduleList[index].sha;
-                    }
-                },
-                errorCall.call(this, "Unable to " + task + " the module", 'Snap!Cloud'),
-                XMLModuleContents.attributes['author']
-            );
-        }
         request.open(
             "PUT",
             "https://api.github.com/repos/MTesting2/Test/contents/" + XMLModuleContents.attributes['author'] + "/" + XMLModuleContents.attributes['name'] + ".xml",
@@ -322,10 +274,10 @@ Cloud.prototype.exportModule = function (moduleContents, task, callBack, errorCa
         );
         request.setRequestHeader(
             "Authorization",
-            "Basic " + btoa("MTesting2:efaaf65053f887e4de5f4ac265a6c9062e8b182b")
+            "Basic " + btoa("MTesting2:2708f98d21dfd6f9cfedcdf67511641838aec2ab")
         );
         request.onreadystatechange = function () {
-            if (request.readyState == 4) {
+            if (request.readyState === 4) {
                 callBack.call(
                     null,
                     request.responseText
@@ -335,9 +287,10 @@ Cloud.prototype.exportModule = function (moduleContents, task, callBack, errorCa
         //var usr = JSON.stringify({"message":"test", "content":"aG9sYSBkZXNkZSBqYXZhc2NyaXB0IE1UZXN0aW5nMiE=","sha": "08f5baec789ea8760cd8cc8da4642909476744a5"});
         //request.send(usr);
         var contents = {"path": "https://api.github.com/repos/MTesting2/Test/contents/" + XMLModuleContents.attributes['author'],
-                    "message":"tests",
+                        "message":"tests",
                         "content":btoa(moduleContents)};
-        if (task == 'update') {
+
+        if (task === 'update') {
             contents["sha"] = sha;
         }
         request.send(JSON.stringify(contents));
