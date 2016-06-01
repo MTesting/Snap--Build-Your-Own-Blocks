@@ -207,7 +207,7 @@ Cloud.prototype.getModuleTree = function (callBack, errorCall, recursion) {
         );
         request.setRequestHeader(
             "Authorization",
-            "Basic " + btoa("MTesting2:7bc3b1a5e33daf9df99974e6552460f0ad20fac8")
+            "Basic " + btoa("MTesting2:06f25689634bb8ffc099054f9aa9132668529716")
         );
         request.setRequestHeader(
             "Content-Type",
@@ -274,7 +274,7 @@ Cloud.prototype.exportModule = function (callBack, errorCall, moduleContents, sh
         );
         request.setRequestHeader(
             "Authorization",
-            "Basic " + btoa("MTesting2:7bc3b1a5e33daf9df99974e6552460f0ad20fac8")
+            "Basic " + btoa("MTesting2:06f25689634bb8ffc099054f9aa9132668529716")
         );
         request.onreadystatechange = function () {
             if (request.readyState === 4) {
@@ -316,7 +316,7 @@ Cloud.prototype.deleteModule = function (callBack, errorCall, username, moduleNa
         );
         request.setRequestHeader(
             "Authorization",
-            "Basic " + btoa("MTesting2:7bc3b1a5e33daf9df99974e6552460f0ad20fac8")
+            "Basic " + btoa("MTesting2:06f25689634bb8ffc099054f9aa9132668529716")
         );
         request.onreadystatechange = function () {
             if (request.readyState === 4) {

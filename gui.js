@@ -3734,57 +3734,49 @@ ModuleExportDialogMorph.prototype.publishModule = function () { //blockList = se
 }
 
 ModuleExportDialogMorph.prototype.updateModule = function () { //girar ifs -> evitar repetir para coger el sha!!! //blockList = selected blocks????
-    var myself = this;
-    if (!this.selectedBlocks || this.selectedBlocks.length > 0) {
-            SnapCloud.getModuleTree(
-                function (treeJSON) {
-                    var treeList = JSON.parse(treeJSON);
-                    for (index in treeList.tree) {
-                        if (treeList.tree[index].path ===  SnapCloud.username + "/" + myself.moduleNameField.text + ".xml") {
-                            var str = myself.ide.serializer.serialize(myself.selectedBlocks);
-                            myself.rawExportModule(myself.moduleNameField.text, str, treeList.tree[index].sha);
-                            break;
-                        }
-                    }
-                },
-                myself.ide.cloudError(),
-                true
-            );
-    } else {
-        if (this.blocks.length === 0) {
-            this.ide.showMessage("No custom blocks", 2);
-            this.destroy();
-        } else {
-            this.ide.confirm(
-                'There are no blocks selected\nThe module will be deleted',
-                'Delete Module',
-                function () {
-                    SnapCloud.getModuleTree(
-                        function (treeJSON) {
-                            var treeList = JSON.parse(treeJSON);
-                            for (index in treeList.tree) {
-                                if (treeList.tree[index].path ===  SnapCloud.username + "/" + myself.moduleNameField.text + ".xml") {
-                                    SnapCloud.deleteModule(
-                                        function (response) {
-                                            myself.ide.showMessage('Module deleted', 2);
-                                        },
-                                        myself.ide.cloudError(),
-                                        SnapCloud.username,
-                                        myself.moduleNameField.text,
-                                        treeList.tree[index].sha
-                                    );
-                                    break;
-                                }
-                            }
-                        },
-                        myself.ide.cloudError(),
-                        true
-                    );
-                    myself.destroy();
-                }
-            );
-        }
+    if (this.blocks.length === 0) {
+        this.ide.showMessage("No custom blocks", 2);
+        this.destroy();
     }
+
+    var myself = this,
+    sha;
+
+    SnapCloud.getModuleTree(
+        function (treeJSON) {
+            var treeList = JSON.parse(treeJSON);
+            for (index in treeList.tree) {
+                if (treeList.tree[index].path ===  SnapCloud.username + "/" + myself.moduleNameField.text + ".xml") {
+                    sha = treeList.tree[index].sha;
+                    break;
+                 }
+            }
+
+            if (myself.selectedBlocks && myself.selectedBlocks.length > 0) {
+                var str = myself.ide.serializer.serialize(myself.selectedBlocks);
+                myself.rawExportModule(myself.moduleNameField.text, str, sha);
+            } else {
+                myself.ide.confirm(
+                    'There are no blocks selected\nThe module will be deleted',
+                    'Delete Module',
+                    function () {
+                        SnapCloud.deleteModule(
+                            function (response) {
+                                myself.ide.showMessage('Module deleted', 2);
+                                myself.destroy();
+                            },
+                            myself.ide.cloudError(),
+                            SnapCloud.username,
+                            myself.moduleNameField.text,
+                            sha
+                        );
+                    }
+                );
+            }
+        },
+        myself.ide.cloudError(),
+        true
+    );
 }
 
 // ModuleExportDialogMorph layout
