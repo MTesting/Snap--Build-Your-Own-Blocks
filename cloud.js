@@ -207,7 +207,7 @@ Cloud.prototype.getModuleTree = function (callBack, errorCall, recursion) {
         );
         request.setRequestHeader(
             "Authorization",
-            "Basic " + btoa("MTesting2:2708f98d21dfd6f9cfedcdf67511641838aec2ab")
+            "Basic " + btoa("MTesting2:7bc3b1a5e33daf9df99974e6552460f0ad20fac8")
         );
         request.setRequestHeader(
             "Content-Type",
@@ -274,7 +274,7 @@ Cloud.prototype.exportModule = function (callBack, errorCall, moduleContents, sh
         );
         request.setRequestHeader(
             "Authorization",
-            "Basic " + btoa("MTesting2:2708f98d21dfd6f9cfedcdf67511641838aec2ab")
+            "Basic " + btoa("MTesting2:7bc3b1a5e33daf9df99974e6552460f0ad20fac8")
         );
         request.onreadystatechange = function () {
             if (request.readyState === 4) {
@@ -295,6 +295,42 @@ Cloud.prototype.exportModule = function (callBack, errorCall, moduleContents, sh
         if (task === 'update') {
             contents["sha"] = sha;
         }
+        request.send(JSON.stringify(contents));
+    } catch (err) {
+        errorCall.call(this, err.toString(), 'Snap!Cloud');
+    }
+}
+
+Cloud.prototype.deleteModule = function (callBack, errorCall, username, moduleName, sha) {
+    var request = new XMLHttpRequest(),
+        myself = this;
+    try {
+        request.open(
+            "DELETE",
+            "https://api.github.com/repos/MTesting2/Test/contents/" + username + "/" + moduleName + ".xml",
+            true
+        );
+        request.setRequestHeader(
+            "Content-Type",
+            "application/json; charset=utf-8"
+        );
+        request.setRequestHeader(
+            "Authorization",
+            "Basic " + btoa("MTesting2:7bc3b1a5e33daf9df99974e6552460f0ad20fac8")
+        );
+        request.onreadystatechange = function () {
+            if (request.readyState === 4) {
+                callBack.call(
+                    null,
+                    request.responseText
+                );
+            }
+        };
+        var contents = {
+            "path": "https://api.github.com/repos/MTesting2/Test/contents/" + username,
+            "message": "tests",
+            "sha": sha
+        };
         request.send(JSON.stringify(contents));
     } catch (err) {
         errorCall.call(this, err.toString(), 'Snap!Cloud');
