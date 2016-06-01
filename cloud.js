@@ -206,9 +206,9 @@ Cloud.prototype.getModuleTree = function (callBack, errorCall, recursion) {
             true
         );
         request.setRequestHeader(
-              "Authorization",
-              "Basic " + btoa("MTesting2:2708f98d21dfd6f9cfedcdf67511641838aec2ab")
-          );
+            "Authorization",
+            "Basic " + btoa("MTesting2:2708f98d21dfd6f9cfedcdf67511641838aec2ab")
+        );
         request.setRequestHeader(
             "Content-Type",
             "application/x-www-form-urlencoded"
@@ -228,7 +228,7 @@ Cloud.prototype.getModuleTree = function (callBack, errorCall, recursion) {
     }
 }
 
-Cloud.prototype.getModuleContents = function (author,module,callBack, errorCall) {
+Cloud.prototype.getModuleContents = function (callBack, errorCall, author, module) {
     var request = new XMLHttpRequest(),
     myself = this;
     try {
@@ -257,9 +257,9 @@ Cloud.prototype.getModuleContents = function (author,module,callBack, errorCall)
 
 Cloud.prototype.exportModule = function (callBack, errorCall, moduleContents, sha) {
     var request = new XMLHttpRequest(),
-    myself = this,
-    task = sha ? 'update' : 'publish',
-    XMLModuleContents = new XML_Element();
+        myself = this,
+        task = sha ? 'update' : 'publish',
+        XMLModuleContents = new XML_Element();
     XMLModuleContents.parseString(moduleContents);
 
     try {
@@ -286,9 +286,11 @@ Cloud.prototype.exportModule = function (callBack, errorCall, moduleContents, sh
         };
         //var usr = JSON.stringify({"message":"test", "content":"aG9sYSBkZXNkZSBqYXZhc2NyaXB0IE1UZXN0aW5nMiE=","sha": "08f5baec789ea8760cd8cc8da4642909476744a5"});
         //request.send(usr);
-        var contents = {"path": "https://api.github.com/repos/MTesting2/Test/contents/" + XMLModuleContents.attributes['author'],
-                        "message":"tests",
-                        "content":btoa(moduleContents)};
+        var contents = {
+            "path": "https://api.github.com/repos/MTesting2/Test/contents/" + XMLModuleContents.attributes['author'],
+            "message": "tests",
+            "content": btoa(moduleContents)
+        };
 
         if (task === 'update') {
             contents["sha"] = sha;
