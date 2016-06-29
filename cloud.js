@@ -216,8 +216,8 @@ Cloud.prototype.getModuleTree = function (callBack, errorCall) {
                 } else {
                     errorCall.call(
                         null,
-                        url,
-                        request.responseText
+                        request.responseText,
+                        'Error accessing the repository'
                     );
                 }
             }
@@ -247,10 +247,18 @@ Cloud.prototype.getModuleInformation = function (callBack, errorCall, author, na
         );
         request.onreadystatechange = function () {
             if (request.readyState === 4) {
-                callBack.call(
-                    null,
-                    request.responseText
-                );
+                if (request.status === 200) {
+                    callBack.call(
+                        null,
+                        request.responseText
+                    );
+                } else {
+                    errorCall.call(
+                        null,
+                        request.responseText,
+                        'Error requesting the module information'
+                    );
+                }
             }
         };
         request.send(null);
@@ -274,10 +282,18 @@ Cloud.prototype.getModuleContents = function (callBack, errorCall, author, modul
         );
         request.onreadystatechange = function () {
             if (request.readyState === 4) {
-                callBack.call(
-                    null,
-                    request.responseText
-                );
+                if (request.status === 200) {
+                    callBack.call(
+                        null,
+                        request.responseText
+                    );
+                } else {
+                    errorCall.call(
+                        null,
+                        request.responseText,
+                        'Error requesting the module contents'
+                    );
+                }
             }
         };
         request.send(null);
@@ -309,10 +325,18 @@ Cloud.prototype.exportModule = function (callBack, errorCall, contents, task) {
         );
         request.onreadystatechange = function () {
             if (request.readyState === 4) {
-                callBack.call(
-                    null,
-                    request.responseText
-                );
+                if (request.status === 200) {
+                    callBack.call(
+                        null,
+                        request.responseText
+                    );
+                } else {
+                   errorCall.call(
+                       null,
+                       request.responseText,
+                       'Error exporting the module'
+                   );
+               }
             }
         };
 
@@ -327,7 +351,7 @@ Cloud.prototype.deleteModule = function (callBack, errorCall, name) {
     try {
         request.open(
             "DELETE",
-            "https://snaprepo-eledu.c9users.io/users/" + this.username + "/modules/" + name + ".xml";
+            "https://snaprepo-eledu.c9users.io/users/" + this.username + "/modules/" + name,
             true
         );
         request.setRequestHeader(
@@ -336,10 +360,18 @@ Cloud.prototype.deleteModule = function (callBack, errorCall, name) {
         );
         request.onreadystatechange = function () {
             if (request.readyState === 4) {
-                callBack.call(
-                    null,
-                    request.responseText
-                );
+                if (request.status === 200) {
+                    callBack.call(
+                        null,
+                        request.responseText
+                    );
+                } else {
+                    errorCall.call(
+                        null,
+                        request.responseText,
+                        'Error while deleting the module'
+                    );
+                }
             }
         };
         request.send(null);

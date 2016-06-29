@@ -3625,13 +3625,13 @@ ModuleExportDialogMorph.prototype.updateModule = function () {//blockList = sele
         this.ide.showMessage("No custom blocks", 2);
         this.destroy();
     }
-
-    if (myself.selectedBlocks && myself.selectedBlocks.length > 0) {
+    if (this.selectedBlocks && this.selectedBlocks.length > 0) {
         var str = this.ide.serializer.serialize(this.selectedBlocks);
         this.rawExportModule(this.moduleNameField.text, str);
         this.destroy();
     } else {
-        myself.ide.confirm(
+        var myself = this;
+        this.ide.confirm(
             'There are no blocks selected\nThe module will be deleted',
             'Delete Module',
             function () {
