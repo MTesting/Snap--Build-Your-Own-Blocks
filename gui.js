@@ -2752,27 +2752,6 @@ IDE_Morph.prototype.publishModuleBrowser = function () {
 
 // ModuleImportDialogMorph ////////////////////////////////////////////////////
 
-/*function TestParent(){}
-
-TestParent.prototype.ffffooo = function () {console.log("TestParent");}
-TestParent.prototype.compar = function (){this.ffffooo();}
-
-function TestChild(){}
-TestChild.prototype = new TestParent();
-
-TestChild.prototype.ffffooo = function (){console.log("TestChild1");}
-
-function TestChild2(){}
-TestChild2.prototype = new TestParent();
-
-TestChild2.prototype.ffffooo = function (){console.log("TestChild2");}
-
-
-var testtt = new TestChild();
-var testtt2 = new TestChild2();
-
-testtt.compar();
-testtt2.compar();*/
 // ModuleImportDialogMorph inherits from DialogBoxMorph:
 
 ModuleImportDialogMorph.prototype = new DialogBoxMorph();
@@ -2780,8 +2759,6 @@ ModuleImportDialogMorph.prototype.constructor = ModuleImportDialogMorph;
 ModuleImportDialogMorph.uber = DialogBoxMorph.prototype;
 
 // ModuleImportDialogMorph instance creation:
-
-
 
 function ModuleImportDialogMorph(ide) {
     this.init(ide);
@@ -2793,15 +2770,15 @@ ModuleImportDialogMorph.prototype.init = function (ide) {
     // additional properties:
     this.ide = ide;
     this.moduleList = [];
-    this.xmlModuleContents;
+    this.selection = {'user': '',
+                      'name': '',
+                      'selected': false};
     this.blocks = [];
 
     this.handle = null;
     this.nameField = null; /* input text */
     this.myModuleCheckBox = null; /* only my modules */
     this.modulesListField = null;
-    this.descriptionNotesText = null;
-    this.informationNotesText = null;
     this.descriptionNotesField = null;
     this.informationNotesField = null;
 
@@ -2842,23 +2819,9 @@ ModuleImportDialogMorph.prototype.buildContents = function () {
 
             myself.nameField.contents().children[0].changed();
 
-            if (myself.descriptionNotesText)
-                myself.descriptionNotesText.destroy();
+            myself.descriptionNotesField.setContents(new TextMorph('Description...'));
 
-            myself.descriptionNotesText = new TextMorph('Description...');
-            myself.descriptionNotesText.isEditable = false;
-            myself.descriptionNotesText.enableSelecting();
-
-            myself.descriptionNotesField.setContents(myself.descriptionNotesText);
-
-            if (myself.informationNotesText)
-                myself.informationNotesText.destroy();
-
-            myself.informationNotesText = new TextMorph('Information...');
-            myself.informationNotesText.isEditable = false;
-            myself.informationNotesText.enableSelecting();
-
-            myself.informationNotesField.setContents(myself.informationNotesText);
+            myself.informationNotesField.setContents( new TextMorph('Information...'));
 
             myself.blocks = [];
 
@@ -2878,13 +2841,23 @@ ModuleImportDialogMorph.prototype.buildContents = function () {
     this.nameField.setWidth(150);
 
     this.nameField.contents().childChanged = function (child) {
-         myself.addModules(myself.moduleList);
+         myself.loadModuleList(myself.moduleList);
          myself.fixListFieldItemColors();
          myself.fixLayout();
 
     }
 
-    this.addModules(myself.moduleList);
+    this.modulesListField = new ListMorph([]);
+    this.modulesListField.fixLayout = nop;
+    this.modulesListField.edge = InputFieldMorph.prototype.edge;
+    this.modulesListField.fontSize = InputFieldMorph.prototype.fontSize;
+    this.modulesListField.typeInPadding = InputFieldMorph.prototype.typeInPadding;
+    this.modulesListField.contrast = InputFieldMorph.prototype.contrast;
+    this.modulesListField.drawNew = InputFieldMorph.prototype.drawNew;
+    this.modulesListField.drawRectBorder = InputFieldMorph.prototype.drawRectBorder;
+    this.modulesListField.setWidth(this.nameField.width());
+
+    this.body.add(this.modulesListField);
 
     this.body.add(this.nameField);
 
@@ -2901,14 +2874,9 @@ ModuleImportDialogMorph.prototype.buildContents = function () {
     this.descriptionNotesField.acceptsDrops = false;
     this.descriptionNotesField.contents.acceptsDrops = false;
 
-    this.descriptionNotesText = new TextMorph();
-    this.descriptionNotesText.text = 'Description...';
-    this.descriptionNotesText.isEditable = false;
-    this.descriptionNotesText.enableSelecting();
-
     this.descriptionNotesField.isTextLineWrapping = true;
     this.descriptionNotesField.padding = 3;
-    this.descriptionNotesField.setContents(this.descriptionNotesText);
+    this.descriptionNotesField.setContents(new TextMorph('Description...'));
     this.descriptionNotesField.setWidth(200);
 
     this.body.add(this.descriptionNotesField);
@@ -2926,13 +2894,9 @@ ModuleImportDialogMorph.prototype.buildContents = function () {
     this.informationNotesField.acceptsDrops = false;
     this.informationNotesField.contents.acceptsDrops = false;
 
-    this.informationNotesText = new TextMorph('Information...');
-    this.informationNotesText.isEditable = false;
-    this.informationNotesText.enableSelecting();
-
     this.informationNotesField.isTextLineWrapping = true;
     this.informationNotesField.padding = 3;
-    this.informationNotesField.setContents(this.informationNotesText);
+    this.informationNotesField.setContents(new TextMorph('Information...'));
     this.informationNotesField.setWidth(this.descriptionNotesField.width());
 
     this.body.add(this.informationNotesField);
@@ -2948,7 +2912,7 @@ ModuleImportDialogMorph.prototype.buildContents = function () {
 
     this.addButton('cancel', 'Cancel');
 
-    this.requestModules();
+    this.requestTree();
 
     this.buildCanvas();
 
@@ -3060,85 +3024,57 @@ ModuleImportDialogMorph.prototype.fixListFieldItemColors = function () {
     });
 };
 
-ModuleImportDialogMorph.prototype.requestModules = function () {
-    console.log("modules requested!");
-
+ModuleImportDialogMorph.prototype.requestTree = function () {
+    console.log("tree requested!");
     var myself = this;
     this.moduleList = [];
     SnapCloud.getModuleTree(
         function (treeJSON) {
-            console.log(treeJSON);
-            var treeList = JSON.parse(treeJSON),
-                author,
-                elem;
-
-            treeList.tree.forEach(function (element) {
-                if (element.type === "tree") {
-                    if (author)  {
-                        myself.moduleList.push(elem);
-                    }
-                    author = element.path;
-                    elem = {
-                        'author' : author,
-                        'modules': []
-                    };
-                } else {
-                    var name = element.path.split('/')[1];
-
-                    elem['modules'].push(name.substr(0, name.length - 4));
-                }
-            });
-            myself.moduleList.push(elem);
-
-            myself.addModules(myself.moduleList);
+            myself.moduleList = JSON.parse(treeJSON);
+            myself.loadModuleList(myself.moduleList);
             myself.fixListFieldItemColors();
             myself.fixLayout();
         },
-        myself.ide.cloudError(),
-        true
+        myself.ide.cloudError()
     );
 }
 
-ModuleImportDialogMorph.prototype.requestModuleContents = function (module){
-    console.log("module contents requested!");
+ModuleImportDialogMorph.prototype.loadBlockList = function () {
+    console.log("Loading block list!");
+    if (this.selection['selected']) {
+        var myself = this;
+        this.blocks = [];
 
-    var myself = this;
-    this.blocks = [];
+        SnapCloud.getModuleInformation(
+            function (information) {
+                var jsonInformation = JSON.parse(information);
 
-    SnapCloud.getModuleContents(
-        function (moduleContents) {
-            myself.xmlModuleContents = new XML_Element();
-            myself.xmlModuleContents.parseString(moduleContents);
+                myself.descriptionNotesField.setContents(new TextMorph(jsonInformation.description));
 
-            if (myself.descriptionNotesText) {
-                myself.descriptionNotesText.destroy();
-            }
-            myself.descriptionNotesText = new TextMorph(myself.xmlModuleContents.require('description').contents);
-            myself.descriptionNotesText.isEditable = false;
-            myself.descriptionNotesText.enableSelecting();
+                myself.informationNotesField.setContents(new TextMorph("Name: " + jsonInformation.name + "\nAuthor: " + jsonInformation.user + "\nLast Update: " + jsonInformation.updated));
 
-            myself.descriptionNotesField.setContents(myself.descriptionNotesText);
+                console.log('Loading module contents');
+                SnapCloud.getModuleContents(
+                    function(contents) {
+                        myself.blocks = myself.ide.serializer.loadBlocks(contents, myself.ide.stage);
 
-            if (myself.informationNotesText)
-                myself.informationNotesText.destroy();
-
-            myself.informationNotesText = new TextMorph("Name: " + myself.xmlModuleContents.attributes['name'] + "\nAuthor: " + module['author'] + "\nLast Update: " + myself.xmlModuleContents.attributes['updated']);
-            myself.informationNotesText.isEditable = false;
-            myself.informationNotesText.enableSelecting();
-
-            myself.informationNotesField.setContents(myself.informationNotesText);
-            myself.blocks = myself.ide.serializer.loadBlocks(myself.xmlModuleContents.require('blocks').toString(), myself.ide.stage);
-
-            myself.buildCanvas();
-            myself.fixLayout();
-        },
-        myself.ide.cloudError(),
-        module['author'],
-        module['name']
-    );
+                        myself.buildCanvas();
+                        myself.fixLayout();
+                    },
+                    myself.ide.cloudError(),
+                    myself.selection['user'],
+                    myself.selection['name']
+                );
+            },
+            myself.ide.cloudError(),
+            myself.selection['user'],
+            myself.selection['name']
+        );
+    }
 }
 
-ModuleImportDialogMorph.prototype.addModules = function (modules) { //CAMBIAR POR REFRESHMODULES
+ModuleImportDialogMorph.prototype.loadModuleList = function (modules) {
+    console.log('loading module list');
     var myself = this;
 
     if (this.modulesListField) {
@@ -3147,11 +3083,11 @@ ModuleImportDialogMorph.prototype.addModules = function (modules) { //CAMBIAR PO
 
     var moduleList = [];
     modules.forEach(function (author) {
-        if (!myself.myModuleCheckBox.state || author['author'] === SnapCloud.username) {
+        if (!myself.myModuleCheckBox.state || author['name'] === SnapCloud.username) {
             author['modules'].forEach(function (item){
                 if (item.toUpperCase().indexOf(myself.nameField.contents().text.text.toUpperCase()) > -1) {
                     moduleList.push({
-                        'author': author['author'],
+                        'user': author['name'],
                         'name': item
                     });
                 }
@@ -3159,14 +3095,12 @@ ModuleImportDialogMorph.prototype.addModules = function (modules) { //CAMBIAR PO
         }
     });
 
-    console.log(moduleList);
     if (moduleList.length === 0) {
         moduleList.push({
-            'author': 'empty',
+            'user': 'empty',
             'name': 'No modules found'
         });
     }
-
     this.modulesListField = new ListMorph(moduleList, function (element) {return element['name'];});
     this.modulesListField.fixLayout = nop;
     this.modulesListField.edge = InputFieldMorph.prototype.edge;
@@ -3180,56 +3114,29 @@ ModuleImportDialogMorph.prototype.addModules = function (modules) { //CAMBIAR PO
     this.modulesListField.action = function (element) {
         var item = element['name'];
         if (item === 'No modules found') {
+            myself.selection['selected'] = false;
 
-            if (myself.descriptionNotesText) {
-                myself.descriptionNotesText.destroy();
-            }
+            myself.descriptionNotesField.setContents(new TextMorph('Description...'));
 
-            myself.descriptionNotesText = new TextMorph('Description...');
-            myself.descriptionNotesText.isEditable = false;
-
-            myself.descriptionNotesField.setContents(myself.descriptionNotesText);
-
-            if (myself.informationNotesText) {
-                myself.informationNotesText.destroy();
-            }
-
-            myself.informationNotesText = new TextMorph('Information...');
-            myself.informationNotesText.isEditable = false;
-
-            myself.informationNotesField.setContents(myself.informationNotesText);
+            myself.informationNotesField.setContents(new TextMorph('Information...'));
 
             myself.buildCanvas();
+
             myself.fixLayout();
 
             return;
         }
 
-        myself.requestModuleContents(element);
+        myself.selection['selected'] = true;
+        myself.selection['user'] = element['user'];
+        myself.selection['name'] = element['name'];
+        myself.loadBlockList();
 
-        if (myself.descriptionNotesText) {
-            myself.descriptionNotesText.destroy();
-        }
-
-        myself.descriptionNotesText = new TextMorph('Loading ' + item + ' Module...');
-        myself.descriptionNotesText.isEditable = false;
-        myself.descriptionNotesText.enableSelecting();
-
-        myself.descriptionNotesField.setContents(myself.descriptionNotesText);
-
-        if (myself.informationNotesText)
-            myself.informationNotesText.destroy();
-
-        myself.informationNotesText = new TextMorph('Loading ' + item +' Module');
-        myself.informationNotesText.isEditable = false;
-        myself.informationNotesText.enableSelecting();
-
-        myself.informationNotesField.setContents(myself.informationNotesText);
-
-        myself.buildCanvas();
+        //myself.buildCanvas();
 
         myself.fixLayout();
     }
+
     this.body.add(this.modulesListField);
 }
 
@@ -3284,21 +3191,31 @@ ModuleImportDialogMorph.prototype.importModule = function () {
 }
 
 ModuleImportDialogMorph.prototype.downloadModule = function () {
-    if (!this.xmlModuleContents) {
-        this.ide.showMessage('No module selected', 2);
+    var myself = this;
+
+    if (this.selection['selected']) {
+        SnapCloud.getModuleContents(
+            function (contents) {
+                myself.ide.saveXMLAs(contents, myself.selection['name']);
+                myself.destroy();
+            },
+            myself.ide.cloudError(),
+            myself.selection['user'],
+            myself.selection['name']
+        );
     } else {
-        this.ide.saveXMLAs(this.xmlModuleContents.require('blocks').toString(), this.xmlModuleContents.attributes['name']);
-        this.destroy();
+        this.ide.showMessage('No module selected', 2);
     }
 }
 
 ModuleImportDialogMorph.prototype.updateModule = function () {
     if (this.modulesListField.selected) {
-        if (this.modulesListField.selected['author'] === SnapCloud.username) {
+        if (this.selection['selected'] && this.selection['user'] === SnapCloud.username) {
             new ModuleExportDialogMorph(
                 this.ide,
                 'update',
-                this.modulesListField.selected
+                this.selection['name'],
+                this.blocks
             ).popUp();
             this.destroy();
         } else {
@@ -3395,17 +3312,17 @@ ModuleExportDialogMorph.uber = DialogBoxMorph.prototype;
 
 // ModuleExportDialogMorph instance creation:
 
-function ModuleExportDialogMorph(ide, label, module) {
-    this.init(ide, label, module);
+function ModuleExportDialogMorph(ide, label, name, blocks) {
+    this.init(ide, label, name, blocks);
 }
 
-ModuleExportDialogMorph.prototype.init = function (ide, task, module) {
+ModuleExportDialogMorph.prototype.init = function (ide, task, name, blocks) {
     var myself = this;
     // additional properties:
     this.ide = ide;
     this.task = task || 'publish'; // String describing what do do (publish, update)
-    this.moduleAuthorName = module || '';
-    this.blocks = [];
+    this.module = name || '';
+    this.blocks = blocks || [];
     this.selectedBlocks = [];
 
     this.handle = null;
@@ -3442,7 +3359,7 @@ ModuleExportDialogMorph.prototype.buildContents = function () {
     this.addBody(new Morph());
     this.body.color = this.color;
 
-    this.moduleNameField = this.task === 'publish'? new InputFieldMorph('Module name') : new TextMorph(this.moduleAuthorName['name'],null,null,true);
+    this.moduleNameField = this.task === 'publish'? new InputFieldMorph('Module name') : new TextMorph(this.module,null,null,true);
     this.moduleNameField.isEditable = this.task === 'publish'? true : false;
     this.moduleNameField.setWidth(150);
 
@@ -3476,6 +3393,7 @@ ModuleExportDialogMorph.prototype.buildContents = function () {
     this.descriptionNotesText.mouseClickLeft = function () {
         if (myself.descriptionNotesText.text === 'Description...') {
             myself.descriptionNotesText.text = '';
+
             myself.fixLayout();
         }
     }
@@ -3492,9 +3410,9 @@ ModuleExportDialogMorph.prototype.buildContents = function () {
 
     this.addButton('cancel', 'Cancel')
 
-    if (this.task === 'update')
-        this.requestModuleContents(this.moduleAuthorName);
-    else {
+    if (this.task === 'update'){
+        //this.requestModuleContents(SnapCloud.username, module);
+    }else {
         this.selectedBlocks = [];
         this.blocks = this.ide.stage.globalBlocks;
         if (this.blocks.length === 0) {
@@ -3507,9 +3425,6 @@ ModuleExportDialogMorph.prototype.buildContents = function () {
 
     this.fixLayout();
 };
-
-// = [{autor:'asdasd', moduleNames: ['asdsafd','dsf']},{autor:'asdasd', blocks: [asdsafd,dsf]},{autor:'asdasd', blocks: [asdsafd,dsf]}]
-
 
 ModuleExportDialogMorph.prototype.buildCanvas = function () {
     if (!this.blocks) {
@@ -3613,7 +3528,7 @@ ModuleExportDialogMorph.prototype.popUp = function (wrrld) {
     }
 };
 
-ModuleExportDialogMorph.prototype.requestModuleContents = function (moduleAuthorName){
+ModuleExportDialogMorph.prototype.requestModule = function (user, module){
     console.log("module contents requested!");
 
     var myself = this;
@@ -3649,12 +3564,12 @@ ModuleExportDialogMorph.prototype.requestModuleContents = function (moduleAuthor
             myself.fixLayout();
         },
         myself.ide.cloudError(),
-        moduleAuthorName['author'],
-        moduleAuthorName['name']
+        user,
+        module
     );
 }
 
-ModuleExportDialogMorph.prototype.rawExportModule = function (moduleName, blockListStr, sha) {
+ModuleExportDialogMorph.prototype.rawExportModule = function (moduleName, blockListStr) {
     if (moduleName.indexOf('/') > -1) {
         this.ide.showMessage("The char '/' is not allowed in the module name", 2);
     } else {
@@ -3663,28 +3578,18 @@ ModuleExportDialogMorph.prototype.rawExportModule = function (moduleName, blockL
         } else {
 
             // blocks to string
-            var str = '<blocks app="'
-                + this.ide.serializer.app
-                + '" version="'
-                + this.ide.serializer.version
-                + '">'
-                + blockListStr
-                + '</blocks>';
-
-                //module
-            var date = new Date();
-            str = '<module name="'
-                + moduleName
-                + '" author="'
-                + SnapCloud.username
-                + '" updated="'
-                + date.getHours() + ':' + date.getMinutes() + ' - ' + date.getDate() + ' / ' + (date.getMonth() + 1) + ' / ' + date.getFullYear()
-                + '">'
-                + '<description>'
-                + this.descriptionNotesText.text
-                + '</description>'
-                + str
-                + '</module>';
+            var contents = {
+                'name': moduleName,
+                'user': SnapCloud.username,
+                'description': this.descriptionNotesText.text,
+                'blocks': '<blocks app="'
+                          + this.ide.serializer.app
+                          + '" version="'
+                          + this.ide.serializer.version
+                          + '">'
+                          + blockListStr
+                          + '</blocks>'
+            };
 
             var myself = this;
             SnapCloud.exportModule(
@@ -3693,36 +3598,18 @@ ModuleExportDialogMorph.prototype.rawExportModule = function (moduleName, blockL
                     myself.destroy();
                 },
                 myself.ide.cloudError(),
-                str,
-                sha
+                contents,
+                myself.task
             );
         }
     }
 }
 
-ModuleExportDialogMorph.prototype.publishModule = function () { //blockList = selected blocks???? && aprovechar para obtener el sha, o desde module list despues de hacer el export module!!
+ModuleExportDialogMorph.prototype.publishModule = function () { //blockList = selected blocks????
     var myself = this;
     if (!this.selectedBlocks || this.selectedBlocks.length > 0) {
-        SnapCloud.getModuleTree(
-            function (treeJSON) {
-                var treeList = JSON.parse(treeJSON),
-                    found = false;
-                for (index in treeList.tree) {
-                    if (treeList.tree[index].path ===  SnapCloud.username + "/" + myself.moduleNameField.contents().text.text + ".xml") {
-                        found = true;
-                        break;
-                    }
-                }
-                if (!found) {
-                    var str = myself.ide.serializer.serialize(myself.selectedBlocks);
-                    myself.rawExportModule(myself.moduleNameField.contents().text.text, str);
-                } else {
-                    myself.ide.showMessage('You already have a ' + myself.moduleNameField.contents().text.text  + ' module defined', 2);
-                }
-            },
-            myself.ide.cloudError(),
-            true
-        );
+        var str = myself.ide.serializer.serialize(myself.selectedBlocks);
+        myself.rawExportModule(myself.moduleNameField.contents().text.text, str);
     } else {
         if (this.blocks.length === 0) {
             this.ide.showMessage("No custom blocks", 2);
@@ -3733,50 +3620,32 @@ ModuleExportDialogMorph.prototype.publishModule = function () { //blockList = se
     }
 }
 
-ModuleExportDialogMorph.prototype.updateModule = function () { //girar ifs -> evitar repetir para coger el sha!!! //blockList = selected blocks????
+ModuleExportDialogMorph.prototype.updateModule = function () {//blockList = selected blocks????
     if (this.blocks.length === 0) {
         this.ide.showMessage("No custom blocks", 2);
         this.destroy();
     }
 
-    var myself = this,
-    sha;
-
-    SnapCloud.getModuleTree(
-        function (treeJSON) {
-            var treeList = JSON.parse(treeJSON);
-            for (index in treeList.tree) {
-                if (treeList.tree[index].path ===  SnapCloud.username + "/" + myself.moduleNameField.text + ".xml") {
-                    sha = treeList.tree[index].sha;
-                    break;
-                 }
-            }
-
-            if (myself.selectedBlocks && myself.selectedBlocks.length > 0) {
-                var str = myself.ide.serializer.serialize(myself.selectedBlocks);
-                myself.rawExportModule(myself.moduleNameField.text, str, sha);
-            } else {
-                myself.ide.confirm(
-                    'There are no blocks selected\nThe module will be deleted',
-                    'Delete Module',
-                    function () {
-                        SnapCloud.deleteModule(
-                            function (response) {
-                                myself.ide.showMessage('Module deleted', 2);
-                                myself.destroy();
-                            },
-                            myself.ide.cloudError(),
-                            SnapCloud.username,
-                            myself.moduleNameField.text,
-                            sha
-                        );
-                    }
+    if (myself.selectedBlocks && myself.selectedBlocks.length > 0) {
+        var str = this.ide.serializer.serialize(this.selectedBlocks);
+        this.rawExportModule(this.moduleNameField.text, str);
+        this.destroy();
+    } else {
+        myself.ide.confirm(
+            'There are no blocks selected\nThe module will be deleted',
+            'Delete Module',
+            function () {
+                SnapCloud.deleteModule(
+                    function (response) {
+                        myself.ide.showMessage('Module deleted', 2);
+                        myself.destroy();
+                    },
+                    myself.ide.cloudError(),
+                    myself.moduleNameField.text
                 );
             }
-        },
-        myself.ide.cloudError(),
-        true
-    );
+        );
+    }
 }
 
 // ModuleExportDialogMorph layout
@@ -5825,6 +5694,8 @@ IDE_Morph.prototype.cloudError = function () {
     */
 
     return function (responseText, url) {
+
+    console.log('url: '+url);
         // first, try to find out an explanation for the error
         // and notify the user about it,
         // if none is found, show an error dialog box

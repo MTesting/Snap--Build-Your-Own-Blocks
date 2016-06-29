@@ -191,14 +191,10 @@ Cloud.prototype.getPublicProject = function (
 
 // EDUARDO/////////////////////////////////////////////////////////7
 
-Cloud.prototype.getModuleTree = function (callBack, errorCall, recursion) {
+Cloud.prototype.getModuleTree = function (callBack, errorCall) {
     var request = new XMLHttpRequest(),
     myself = this,
-    url = "https://api.github.com/repos/MTesting2/Test/git/trees/master";
-    if (recursion) {
-        url += "?recursive=1";
-    }
-
+    url = "https://snaprepo-eledu.c9users.io/users/";
     try {
         request.open(
             "GET",
@@ -206,14 +202,49 @@ Cloud.prototype.getModuleTree = function (callBack, errorCall, recursion) {
             true
         );
         request.setRequestHeader(
-            "Authorization",
-            "Basic " + btoa("MTesting2:06f25689634bb8ffc099054f9aa9132668529716")
+            "Content-Type",
+            "application/x-www-form-urlencoded"
+        );
+
+        request.onreadystatechange = function () {
+            if (request.readyState === 4) {
+                if (request.status === 200) {
+                    callBack.call(
+                        null,
+                        request.responseText
+                    );
+                } else {
+                    errorCall.call(
+                        null,
+                        url,
+                        request.responseText
+                    );
+                }
+            }
+        };
+        request.send(null);
+    } catch (err) {
+        errorCall.call(this, err.toString(), 'request error');
+    }
+}
+
+Cloud.prototype.getModuleInformation = function (callBack, errorCall, author, name) {
+    var request = new XMLHttpRequest(),
+    myself = this,
+    url = "https://snaprepo-eledu.c9users.io/users/" + author + "/modules/";
+    if (name) {
+        url += name;
+    }
+    try {
+        request.open(
+            "GET",
+            url,
+            true
         );
         request.setRequestHeader(
             "Content-Type",
             "application/x-www-form-urlencoded"
         );
-
         request.onreadystatechange = function () {
             if (request.readyState === 4) {
                 callBack.call(
@@ -234,7 +265,7 @@ Cloud.prototype.getModuleContents = function (callBack, errorCall, author, modul
     try {
         request.open(
             "GET",
-            "https://raw.githubusercontent.com/MTesting2/Test/master/" + author + "/" + module + ".xml",
+            "https://snaprepo-eledu.c9users.io/users/" + author + "/modules/" + module + "/contents",
             true
         );
         request.setRequestHeader(
@@ -255,26 +286,26 @@ Cloud.prototype.getModuleContents = function (callBack, errorCall, author, modul
     }
 }
 
-Cloud.prototype.exportModule = function (callBack, errorCall, moduleContents, sha) {
+Cloud.prototype.exportModule = function (callBack, errorCall, contents, task) {
     var request = new XMLHttpRequest(),
-        myself = this,
-        task = sha ? 'update' : 'publish',
-        XMLModuleContents = new XML_Element();
-    XMLModuleContents.parseString(moduleContents);
-
+        myself = this;
     try {
-        request.open(
-            "PUT",
-            "https://api.github.com/repos/MTesting2/Test/contents/" + XMLModuleContents.attributes['author'] + "/" + XMLModuleContents.attributes['name'] + ".xml",
-            true
-        );
+        if (task === 'update') {
+            request.open(
+                "PUT",
+                "https://snaprepo-eledu.c9users.io/users/" + contents['user'] + "/modules/" + contents['name'],
+                true
+            );
+        } else {
+            request.open(
+                "POST",
+                "https://snaprepo-eledu.c9users.io/users/" + contents['user'] + "/modules",
+                true
+            );
+        }
         request.setRequestHeader(
             "Content-Type",
-            "application/json; charset=utf-8"
-        );
-        request.setRequestHeader(
-            "Authorization",
-            "Basic " + btoa("MTesting2:06f25689634bb8ffc099054f9aa9132668529716")
+            "application/json"
         );
         request.onreadystatechange = function () {
             if (request.readyState === 4) {
@@ -284,39 +315,24 @@ Cloud.prototype.exportModule = function (callBack, errorCall, moduleContents, sh
                 );
             }
         };
-        //var usr = JSON.stringify({"message":"test", "content":"aG9sYSBkZXNkZSBqYXZhc2NyaXB0IE1UZXN0aW5nMiE=","sha": "08f5baec789ea8760cd8cc8da4642909476744a5"});
-        //request.send(usr);
-        var contents = {
-            "path": "https://api.github.com/repos/MTesting2/Test/contents/" + XMLModuleContents.attributes['author'],
-            "message": "tests",
-            "content": btoa(moduleContents)
-        };
 
-        if (task === 'update') {
-            contents["sha"] = sha;
-        }
         request.send(JSON.stringify(contents));
     } catch (err) {
         errorCall.call(this, err.toString(), 'Snap!Cloud');
     }
 }
 
-Cloud.prototype.deleteModule = function (callBack, errorCall, username, moduleName, sha) {
-    var request = new XMLHttpRequest(),
-        myself = this;
+Cloud.prototype.deleteModule = function (callBack, errorCall, name) {
+    var request = new XMLHttpRequest();
     try {
         request.open(
             "DELETE",
-            "https://api.github.com/repos/MTesting2/Test/contents/" + username + "/" + moduleName + ".xml",
+            "https://snaprepo-eledu.c9users.io/users/" + this.username + "/modules/" + name + ".xml";
             true
         );
         request.setRequestHeader(
             "Content-Type",
-            "application/json; charset=utf-8"
-        );
-        request.setRequestHeader(
-            "Authorization",
-            "Basic " + btoa("MTesting2:06f25689634bb8ffc099054f9aa9132668529716")
+            "application/json"
         );
         request.onreadystatechange = function () {
             if (request.readyState === 4) {
@@ -326,12 +342,7 @@ Cloud.prototype.deleteModule = function (callBack, errorCall, username, moduleNa
                 );
             }
         };
-        var contents = {
-            "path": "https://api.github.com/repos/MTesting2/Test/contents/" + username,
-            "message": "tests",
-            "sha": sha
-        };
-        request.send(JSON.stringify(contents));
+        request.send(null);
     } catch (err) {
         errorCall.call(this, err.toString(), 'Snap!Cloud');
     }
