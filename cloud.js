@@ -191,10 +191,10 @@ Cloud.prototype.getPublicProject = function (
 
 // EDUARDO/////////////////////////////////////////////////////////7
 
-Cloud.prototype.getModuleTree = function (callBack, errorCall) {
+Cloud.prototype.getModuleTree = function (callBack, errorCall, find) {
     var request = new XMLHttpRequest(),
     myself = this,
-    url = "https://snaprepo-eledu.c9users.io/users/";
+    url = find? "https://snaprepo-eledu.c9users.io/search?text=" + find : "https://snaprepo-eledu.c9users.io/users/";
     try {
         request.open(
             "GET",
@@ -203,7 +203,7 @@ Cloud.prototype.getModuleTree = function (callBack, errorCall) {
         );
         request.setRequestHeader(
             "Content-Type",
-            "application/x-www-form-urlencoded"
+            "application/text"
         );
 
         request.onreadystatechange = function () {
@@ -232,6 +232,7 @@ Cloud.prototype.getModuleInformation = function (callBack, errorCall, author, na
     var request = new XMLHttpRequest(),
     myself = this,
     url = "https://snaprepo-eledu.c9users.io/users/" + author + "/modules/";
+
     if (name) {
         url += name;
     }
@@ -243,7 +244,7 @@ Cloud.prototype.getModuleInformation = function (callBack, errorCall, author, na
         );
         request.setRequestHeader(
             "Content-Type",
-            "application/x-www-form-urlencoded"
+            "application/text"
         );
         request.onreadystatechange = function () {
             if (request.readyState === 4) {
@@ -268,6 +269,7 @@ Cloud.prototype.getModuleInformation = function (callBack, errorCall, author, na
 }
 
 Cloud.prototype.getModuleContents = function (callBack, errorCall, author, module) {
+    console.log(module)
     var request = new XMLHttpRequest(),
     myself = this;
     try {
@@ -276,9 +278,10 @@ Cloud.prototype.getModuleContents = function (callBack, errorCall, author, modul
             "https://snaprepo-eledu.c9users.io/users/" + author + "/modules/" + module + "/contents",
             true
         );
+
         request.setRequestHeader(
             "Content-Type",
-            "application/x-www-form-urlencoded"
+            "application/text"
         );
         request.onreadystatechange = function () {
             if (request.readyState === 4) {
@@ -305,6 +308,7 @@ Cloud.prototype.getModuleContents = function (callBack, errorCall, author, modul
 Cloud.prototype.exportModule = function (callBack, errorCall, contents, task) {
     var request = new XMLHttpRequest(),
         myself = this;
+
     try {
         if (task === 'update') {
             request.open(
@@ -319,6 +323,7 @@ Cloud.prototype.exportModule = function (callBack, errorCall, contents, task) {
                 true
             );
         }
+
         request.setRequestHeader(
             "Content-Type",
             "application/json"

@@ -2747,7 +2747,7 @@ IDE_Morph.prototype.openModuleBrowser = function () {
 };
 
 IDE_Morph.prototype.publishModuleBrowser = function () {
-    new ModuleExportDialogMorph(this, 'publish').popUp();
+    this.stage.globalBlocks.length > 0 ? new ModuleExportDialogMorph(this, 'publish').popUp() : this.showMessage("No custom blocks", 2);
 };
 
 // ModuleImportDialogMorph ////////////////////////////////////////////////////
@@ -2841,10 +2841,20 @@ ModuleImportDialogMorph.prototype.buildContents = function () {
     this.nameField.setWidth(150);
 
     this.nameField.contents().childChanged = function (child) {
-         myself.loadModuleList(myself.moduleList);
-         myself.fixListFieldItemColors();
-         myself.fixLayout();
-
+        if (child instanceof StringMorph) {
+            console.log("tree requested!");
+            myself.moduleList = [];
+            SnapCloud.getModuleTree(
+                function (treeJSON) {
+                    myself.moduleList = JSON.parse(treeJSON);
+                    myself.loadModuleList(myself.moduleList);
+                    myself.fixListFieldItemColors();
+                    myself.fixLayout();
+                },
+                myself.ide.cloudError(),
+                myself.nameField.contents().text.text
+            );
+        }
     }
 
     this.modulesListField = new ListMorph([]);
@@ -3034,6 +3044,7 @@ ModuleImportDialogMorph.prototype.requestTree = function () {
             myself.loadModuleList(myself.moduleList);
             myself.fixListFieldItemColors();
             myself.fixLayout();
+            console.log(myself.moduleList);
         },
         myself.ide.cloudError()
     );
@@ -3044,7 +3055,7 @@ ModuleImportDialogMorph.prototype.loadBlockList = function () {
     if (this.selection['selected']) {
         var myself = this;
         this.blocks = [];
-
+console.log(myself.selection)
         SnapCloud.getModuleInformation(
             function (information) {
                 var jsonInformation = JSON.parse(information);
@@ -3075,22 +3086,23 @@ ModuleImportDialogMorph.prototype.loadBlockList = function () {
 
 ModuleImportDialogMorph.prototype.loadModuleList = function (modules) {
     console.log('loading module list');
+
     var myself = this;
 
     if (this.modulesListField) {
         this.modulesListField.destroy();
     }
 
+    this.selection['selected'] = false;
+
     var moduleList = [];
     modules.forEach(function (author) {
         if (!myself.myModuleCheckBox.state || author['name'] === SnapCloud.username) {
             author['modules'].forEach(function (item){
-                if (item.toUpperCase().indexOf(myself.nameField.contents().text.text.toUpperCase()) > -1) {
-                    moduleList.push({
-                        'user': author['name'],
-                        'name': item
-                    });
-                }
+                moduleList.push({
+                    'user': author['name'],
+                    'name': item
+                });
             });
         }
     });
@@ -3140,7 +3152,7 @@ ModuleImportDialogMorph.prototype.loadModuleList = function (modules) {
     this.body.add(this.modulesListField);
 }
 
-ModuleImportDialogMorph.prototype.rawImportModule = function () { //////////////OPTIMIZAR EL DE MAS ABAJO????????///
+ModuleImportDialogMorph.prototype.rawImportModule = function () {
     var myself = this;
     this.blocks.forEach(function (definition){
         myself.ide.stage.globalBlocks.push(definition);
@@ -3156,20 +3168,19 @@ ModuleImportDialogMorph.prototype.rawImportModule = function () { //////////////
         console.log(b.toString());
     });
 
-    this.destroy();///////////////////////////////////////////////////ERROR CON GLOBALBLOCKS!!!!!!!!!///////////////////
+    this.destroy();
 }
 
 
 ModuleImportDialogMorph.prototype.importModule = function () {
     var myself = this,
-//-------------------------------------------------FIND?¿??¿?¿?----------------------------????????????????????
+
     blocks = this.blocks.filter(function (definition) {
-        return (myself.ide.stage.globalBlocks.filter(function (globalDefinition){
-            return (globalDefinition.blockSpec() === definition.blockSpec());
-            //return (globalDefinition.toString() === definition.toString());
-        }).length !== 0); ///////////////////////////CONTAINS¿??¿?¿?¿?/////////////¿¿¿¿¿¿¿¿
+        return !myself.ide.stage.globalBlocks.every(function (globalDefinition) {
+            return (globalDefinition.blockSpec() !== definition.blockSpec());
+        });
     });
-//-----------------------------------------------------------------------------?????????????????????
+
     if (blocks.length === 0) {
         this.rawImportModule();
         this.ide.showMessage('Module imported', 2);
@@ -3320,7 +3331,7 @@ ModuleExportDialogMorph.prototype.init = function (ide, task, name, blocks) {
     var myself = this;
     // additional properties:
     this.ide = ide;
-    this.task = task || 'publish'; // String describing what do do (publish, update)
+    this.task = task || 'publish';
     this.module = name || '';
     this.blocks = blocks || [];
     this.selectedBlocks = [];
@@ -3409,16 +3420,16 @@ ModuleExportDialogMorph.prototype.buildContents = function () {
     this.action = 'exportModule';
 
     this.addButton('cancel', 'Cancel')
-
     if (this.task === 'update'){
-        //this.requestModuleContents(SnapCloud.username, module);
-    }else {
+        this.selectedBlocks = this.blocks;
+        this.blocks = this.blocks.concat(this.ide.stage.globalBlocks.filter(function (element) {
+             return myself.blocks.every(function (belement) {
+                 return (belement.blockSpec() !== element.blockSpec());
+             });
+         }));
+    } else {
         this.selectedBlocks = [];
         this.blocks = this.ide.stage.globalBlocks;
-        if (this.blocks.length === 0) {
-            this.ide.showMessage("No custom blocks", 2);
-            this.destroy();
-        }
     }
 
     this.buildCanvas();
