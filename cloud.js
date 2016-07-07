@@ -191,10 +191,10 @@ Cloud.prototype.getPublicProject = function (
 
 // EDUARDO/////////////////////////////////////////////////////////7
 
-Cloud.prototype.getModuleTree = function (callBack, errorCall, find) {
+Cloud.prototype.getModules = function (callBack, errorCall, user) {
     var request = new XMLHttpRequest(),
     myself = this,
-    url = find? "https://snaprepo-eledu.c9users.io/search?text=" + find : "https://snaprepo-eledu.c9users.io/users/";
+    url = user? "https://snaprepo-eledu.c9users.io/users/" + user + "/modules" : "https://snaprepo-eledu.c9users.io/search";
     try {
         request.open(
             "GET",
@@ -225,46 +225,6 @@ Cloud.prototype.getModuleTree = function (callBack, errorCall, find) {
         request.send(null);
     } catch (err) {
         errorCall.call(this, err.toString(), 'request error');
-    }
-}
-
-Cloud.prototype.getModuleInformation = function (callBack, errorCall, author, name) {
-    var request = new XMLHttpRequest(),
-    myself = this,
-    url = "https://snaprepo-eledu.c9users.io/users/" + author + "/modules/";
-
-    if (name) {
-        url += name;
-    }
-    try {
-        request.open(
-            "GET",
-            url,
-            true
-        );
-        request.setRequestHeader(
-            "Content-Type",
-            "application/text"
-        );
-        request.onreadystatechange = function () {
-            if (request.readyState === 4) {
-                if (request.status === 200) {
-                    callBack.call(
-                        null,
-                        request.responseText
-                    );
-                } else {
-                    errorCall.call(
-                        null,
-                        request.responseText,
-                        'Error requesting the module information'
-                    );
-                }
-            }
-        };
-        request.send(null);
-    } catch (err) {
-        errorCall.call(this, err.toString(), 'Snap!Cloud');
     }
 }
 
