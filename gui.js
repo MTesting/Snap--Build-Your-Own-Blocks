@@ -3068,7 +3068,8 @@ ModuleImportDialogMorph.prototype.loadBlockList = function () {
 ModuleImportDialogMorph.prototype.loadModuleList = function (modules) {
     console.log('loading module list');
     modules.forEach(function(element) {
-        element["name"] = decodeURI(element["name"]);
+        element["name"] = decodeURIComponent(element["name"]);
+        element["description"] = decodeURIComponent(element["description"]);
     });
 
     var myself = this;
@@ -3549,7 +3550,7 @@ ModuleExportDialogMorph.prototype.rawExportModule = function (moduleName, blockL
     var contents = {
         'name': moduleName,
         'user': SnapCloud.username,
-        'description': this.descriptionNotesText.text,
+        'description': encodeURIComponent(this.descriptionNotesText.text),
         'blocks': '<blocks app="'
                   + this.ide.serializer.app
                   + '" version="'
