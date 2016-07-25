@@ -2980,6 +2980,11 @@ ModuleImportDialogMorph.prototype.buildCanvas = function () {
                     myself.world().hand.destroyTemporaries();
                 }
 
+                block.allChildren().forEach(function(element) {
+                        element.isDraggable = false;
+                        element.isEditable = false;
+                });
+
                 myself.blocksScrollFrame.addContents(block);
                 y += block.fullBounds().height() + padding;
             }
@@ -2988,17 +2993,6 @@ ModuleImportDialogMorph.prototype.buildCanvas = function () {
 
     this.blocksScrollFrame.scrollX(padding);
     this.blocksScrollFrame.scrollY(padding);
-
-    this.blocksScrollFrame.changed = function () {
-        myself.blocksScrollFrame.children.forEach(function (child) {
-            if (child instanceof FrameMorph) {
-                if (child.children.length !== myself.blocks.length) {
-                    myself.buildCanvas();
-                    myself.fixLayout();
-                }
-            }
-        });
-    };
 
     this.body.add(this.blocksScrollFrame);
 }
@@ -3073,6 +3067,9 @@ ModuleImportDialogMorph.prototype.loadBlockList = function () {
 
 ModuleImportDialogMorph.prototype.loadModuleList = function (modules) {
     console.log('loading module list');
+    modules.forEach(function(element) {
+        element["name"] = decodeURI(element["name"]);
+    });
 
     var myself = this;
 
@@ -3376,22 +3373,6 @@ ModuleExportDialogMorph.prototype.buildContents = function () {
     this.descriptionNotesText.isEditable = true;
     this.descriptionNotesText.enableSelecting();
 
-    this.mouseClickLeft = function () {
-        if (!myself.descriptionNotesText.currentlySelected && myself.descriptionNotesText.text === '') {
-            //myself.descriptionNotesText.text = 'Description...';
-            myself.descriptionNotesField.color = SpriteMorph.prototype.paletteColor;
-            myself.fixLayout();
-        }
-    }
-
-    this.descriptionNotesText.mouseClickLeft = function () {
-        if (myself.descriptionNotesText.text === 'Description...') {
-            myself.descriptionNotesText.text = '';
-
-            myself.fixLayout();
-        }
-    }
-
     this.descriptionNotesField.isTextLineWrapping = true;
     this.descriptionNotesField.padding = 3;
     this.descriptionNotesField.setContents(this.descriptionNotesText);
@@ -3564,39 +3545,30 @@ ModuleExportDialogMorph.prototype.requestModule = function (user, module){
 }
 
 ModuleExportDialogMorph.prototype.rawExportModule = function (moduleName, blockListStr) {
-    if (moduleName.indexOf('/') > -1) {
-        this.ide.showMessage("The char '/' is not allowed in the module name", 2);
-    } else {
-        if (this.descriptionNotesText.text.indexOf('<') > -1 || this.descriptionNotesText.text.indexOf('>') > -1) {
-            this.ide.show("Neither the char '<' nor the char '>' are allowed in the module description", 2);
-        } else {
+    // blocks to string
+    var contents = {
+        'name': moduleName,
+        'user': SnapCloud.username,
+        'description': this.descriptionNotesText.text,
+        'blocks': '<blocks app="'
+                  + this.ide.serializer.app
+                  + '" version="'
+                  + this.ide.serializer.version
+                  + '">'
+                  + blockListStr
+                  + '</blocks>'
+    };
 
-            // blocks to string
-            var contents = {
-                'name': moduleName,
-                'user': SnapCloud.username,
-                'description': this.descriptionNotesText.text,
-                'blocks': '<blocks app="'
-                          + this.ide.serializer.app
-                          + '" version="'
-                          + this.ide.serializer.version
-                          + '">'
-                          + blockListStr
-                          + '</blocks>'
-            };
-
-            var myself = this;
-            SnapCloud.exportModule(
-                function (code) {
-                    myself.ide.showMessage(myself.task === 'publish' ? 'Module published' : 'Module updated', 2);
-                    myself.destroy();
-                },
-                myself.ide.cloudError(),
-                contents,
-                myself.task
-            );
-        }
-    }
+    var myself = this;
+    SnapCloud.exportModule(
+        function (code) {
+            myself.ide.showMessage(myself.task === 'publish' ? 'Module published' : 'Module updated', 2);
+            myself.destroy();
+        },
+        myself.ide.cloudError(),
+        contents,
+        myself.task
+    );
 }
 
 ModuleExportDialogMorph.prototype.publishModule = function () { //blockList = selected blocks????
