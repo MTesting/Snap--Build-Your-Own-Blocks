@@ -194,7 +194,7 @@ Cloud.prototype.getPublicProject = function (
 Cloud.prototype.getModules = function (callBack, errorCall, user) {
     var request = new XMLHttpRequest(),
     myself = this,
-    url = user? "https://snaprepo-eledu.c9users.io/users/" + encodeURI(user) + "/modules" : "https://snaprepo-eledu.c9users.io/search";
+    url = user? "https://snaprepo-eledu.c9users.io/users/" + encodeURIComponent(user) + "/modules" : "https://snaprepo-eledu.c9users.io/search";
     try {
         request.open(
             "GET",
@@ -229,8 +229,8 @@ Cloud.prototype.getModules = function (callBack, errorCall, user) {
 }
 
 Cloud.prototype.getModuleContents = function (callBack, errorCall, user, module) {
-    user = encodeURI(user);
-    module = encodeURI(module);
+    user = encodeURIComponent(user);
+    module = encodeURIComponent(module);
     console.log(module)
     var request = new XMLHttpRequest(),
     myself = this;
@@ -268,8 +268,8 @@ Cloud.prototype.getModuleContents = function (callBack, errorCall, user, module)
 }
 
 Cloud.prototype.exportModule = function (callBack, errorCall, contents, task) {
-    contents['user'] = encodeURI(contents['user']);
-    contents['name'] = encodeURI(contents['name']);
+    contents['user'] = encodeURIComponent(contents['user']);
+    contents['name'] = encodeURIComponent(contents['name']);
     var request = new XMLHttpRequest(),
         myself = this;
 
@@ -320,7 +320,7 @@ Cloud.prototype.deleteModule = function (callBack, errorCall, name) {
     try {
         request.open(
             "DELETE",
-            "https://snaprepo-eledu.c9users.io/users/" + encodeURI(this.username) + "/modules/" + encodeURI(name),
+            "https://snaprepo-eledu.c9users.io/users/" + encodeURIComponent(this.username) + "/modules/" + encodeURIComponent(name),
             true
         );
         request.setRequestHeader(
