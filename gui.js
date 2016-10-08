@@ -3155,31 +3155,34 @@ ModuleImportDialogMorph.prototype.rawImportModule = function () {
 }
 
 ModuleImportDialogMorph.prototype.importModule = function () {
-    var myself = this,
-
-    blocks = this.blocks.filter(function (definition) {
-        return !myself.ide.stage.globalBlocks.every(function (globalDefinition) {
-            return (globalDefinition.blockSpec() !== definition.blockSpec());
+    var myself = this;
+    if (this.selection) {
+        var blocks = this.blocks.filter(function (definition) {
+            return !myself.ide.stage.globalBlocks.every(function (globalDefinition) {
+                return (globalDefinition.blockSpec() !== definition.blockSpec());
+            });
         });
-    });
 
-    if (blocks.length === 0) {
-        this.rawImportModule();
-        this.ide.showMessage('Module imported', 2);
+        if (blocks.length === 0) {
+            this.rawImportModule();
+            this.ide.showMessage('Module imported', 2);
+        } else {
+            var stringBlockList = '';
+            blocks.forEach(function (definition) {
+                stringBlockList += definition.blockSpec() + '\n';
+            });
+
+            this.ide.confirm(
+                'The blocks:\n---\n' + stringBlockList + ' are already defined and will be overwritten\n---\nAre you sure you want to import the module?',
+                'Import module',
+                function () {
+                    myself.rawImportModule();
+                    myself.ide.showMessage('Module imported', 2);
+                }
+             );
+        }
     } else {
-        var stringBlockList = '';
-        blocks.forEach(function (definition) {
-            stringBlockList += definition.blockSpec() + '\n';
-        });
-
-        this.ide.confirm(
-            'The blocks:\n---\n' + stringBlockList + ' are already defined and will be overwritten\n---\nAre you sure you want to import the module?',
-            'Import module',
-            function () {
-                myself.rawImportModule();
-                myself.ide.showMessage('Module imported', 2);
-            }
-         );
+        this.ide.showMessage('No module selected', 2);
     }
 }
 
